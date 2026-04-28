@@ -1,0 +1,118 @@
+{
+  "theme": "light",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) tailored for Premium Institutional FinTech/PropTech",
+  "core_principles": [
+    "Authority and Clarity: Clean lines, stark contrast, and data-first hierarchy.",
+    "Functional Beauty: 95% monochrome (Navy + White) to let the Champagne Gold accent and KPI status colors direct action.",
+    "Negative Space: Generous padding for a premium, non-cluttered 'Old Money Tech' feel.",
+    "Spanish UI First: Ensure typography accommodates longer Spanish words."
+  ],
+  "typography": {
+    "font_family": {
+      "heading": "Cabinet Grotesk, sans-serif",
+      "body": "Outfit, sans-serif"
+    },
+    "rules": [
+      "No generic 'Inter' for headings. Cabinet Grotesk provides an authoritative, premium institutional voice.",
+      "Outfit for body text ensures high legibility for dense tables and metrics.",
+      "Headings (H1/H2) MUST use 'tracking-tight' letter spacing.",
+      "Overlines and table column headers MUST be Uppercase, text-xs, and wide spacing 'tracking-wider'.",
+      "Do not default to 'Bold' for everything. Use 'font-medium' for standard emphasis and 'font-light' for large display numbers."
+    ]
+  },
+  "colors": {
+    "brand": {
+      "background": "#FFFFFF",
+      "primary": "#031433",
+      "accent": "#D3A154"
+    },
+    "status": {
+      "paid": {
+        "bg": "bg-emerald-50",
+        "text": "text-emerald-700",
+        "border": "border-emerald-200",
+        "hex": "#10B981"
+      },
+      "pending": {
+        "bg": "bg-amber-50",
+        "text": "text-amber-700",
+        "border": "border-amber-200",
+        "hex": "#D3A154"
+      },
+      "overdue": {
+        "bg": "bg-red-50",
+        "text": "text-red-700",
+        "border": "border-red-200",
+        "hex": "#DC2626"
+      }
+    },
+    "tailwind_vars_to_update": {
+      "--background": "0 0% 100%",
+      "--foreground": "219 89% 11%",
+      "--primary": "219 89% 11%",
+      "--primary-foreground": "0 0% 100%",
+      "--accent": "36 60% 58%",
+      "--accent-foreground": "219 89% 11%",
+      "--border": "219 20% 90%",
+      "--muted": "219 20% 96%"
+    }
+  },
+  "layout_and_spacing": {
+    "strategy": "MODE B: THE 'CONTROL ROOM' GRID for the dashboard.",
+    "dashboard_grid": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-6.",
+    "spacing_scale": "Use p-6 or p-8 for cards and internal padding to prevent text collision and maintain a premium feel.",
+    "surfaces": "Use sharp edges or very subtle roundness (max 8px border-radius `rounded-md`). Avoid 'glassmorphism' here; use solid backgrounds with crisp 1px borders (`border-border`) and very subtle layered shadows (`shadow-sm`) to separate from the pure white background."
+  },
+  "components": {
+    "cards": "Go minimalist. Flat white background, 1px subtle border, no heavy drop shadows. On hover, apply a slight lift (`-translate-y-0.5`) and `shadow-md`.",
+    "buttons": "Primary buttons: `bg-[#031433] text-white hover:bg-[#031433]/90`. Accent buttons: `bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90`. Apply smooth transitions: `transition-all duration-200`.",
+    "tables": "Use Shadcn Table. Do not wrap the table in a thick card; go cardless or use a minimal border. Ensure status badges (Pagado, Pendiente, Atrasado) are styled distinctly using the status colors provided.",
+    "navigation": "Fixed sidebar on desktop (`w-64`), hidden on mobile (use hamburger menu). Sidebar should have a very light gray background (`bg-slate-50`) or use the primary `#031433` for a high-contrast institutional look (preferred).",
+    "charts": "Use Recharts or Shadcn chart components. Use Navy `#031433` and Gold `#D3A154` for main data points.",
+    "forms": "Use Shadcn components (Input, Select, Checkbox). Do not use native HTML inputs.",
+    "contract_viewer": "Create a clear modal or page for digital contracts with a simulated signature area. The signature area should have a subtle dotted border, a pale gray background (`bg-slate-50`), and use a script font or cursive text to simulate the digital signature. Include a 'Firmar Contrato' button."
+  },
+  "animations": {
+    "micro_interactions": "Subtle hover states on all interactive elements. Buttons must have hover lift and shadow increase. Table rows should have a very subtle `hover:bg-slate-50` transition.",
+    "page_transitions": "Keep it fast. Dashboards require speed. Minimal fade-in for charts."
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure white text on the Champagne Gold accent meets minimum 3:1 contrast for large text; if not, use Navy text on Gold.",
+    "testing": "All interactive and key informational elements MUST include `data-testid` attributes (e.g., `data-testid=\"login-btn\"`, `data-testid=\"kpi-revenue\"`)."
+  },
+  "media": {
+    "icons": "Use `lucide-react` (already installed) for clean, professional iconography.",
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/16110999/pexels-photo-16110999.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "property_exterior_1",
+        "description": "Modern contemporary glass architecture, ideal for property thumbnails in the Rent Roll table."
+      },
+      {
+        "url": "https://images.pexels.com/photos/2462015/pexels-photo-2462015.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "property_exterior_2",
+        "description": "Stylish residential building, ideal for dashboard hero or property detail view."
+      },
+      {
+        "url": "https://images.pexels.com/photos/20157010/pexels-photo-20157010.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "avatar_admin",
+        "description": "Elegant professional portrait, use for Admin profile avatar."
+      },
+      {
+        "url": "https://images.pexels.com/photos/7163458/pexels-photo-7163458.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "avatar_tenant",
+        "description": "Confident business person, use for Tenant/Inquilino profile avatar."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Load `@fontsource/cabinet-grotesk` and `@fontsource/outfit` or equivalent Google Fonts in the application.",
+    "Ensure the UI is 100% in Spanish as requested (e.g. 'Ingresos', 'Ocupación', 'Contratos por Vencer', 'Morosidad').",
+    "Implement Google Login mockup (simulated auth flow) and conditionally render Admin vs Inquilino views.",
+    "The Rent Roll table MUST feature the dynamic status badges according to the colors defined here.",
+    "Build the dashboard using the 'Control Room' grid layout.",
+    "Add `data-testid` to all key elements for testing. Use kebab-case.",
+    "Design the Contract Viewer (Visualizador de Contratos) with a digital signature area simulation.",
+    "Apply hover states for all buttons."
+  ]
+}
