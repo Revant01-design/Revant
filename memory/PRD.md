@@ -1,61 +1,58 @@
 # PRD – Revant PropTech Dashboard
 
 ## Original Problem Statement
-Build the functional core of the Revant Dashboard (PropTech/FinTech for the Mexican market). React + Tailwind + FastAPI + MongoDB. Brand: white #FFFFFF, navy #031433, gold #D3A154, geometric sans-serif. Modules: auth + roles, dynamic Rent Roll (Paid/Pending/Overdue), digital contract viewer + signature, KPI dashboard.
-
-## User Choices
-- Login: Emergent Google OAuth + Email/Password (added in iter 2)
-- Demo data preloaded
-- PDF generation: server-side (ReportLab)
-- Signature: real canvas (added in iter 2)
-- Email: Gmail SMTP App Password (pending credentials)
-- Auto reminders: manual + automatic
-- ARCO: complete admin tickets workflow
-- UI 100% Spanish
-- Roles: Administrador (full portfolio) / Inquilino (own contract)
+Build the functional core of Revant Dashboard (PropTech/FinTech, México). React + Tailwind + FastAPI + MongoDB. Brand: white #FFFFFF, navy #031433, gold #D3A154. Modules: auth + roles, Rent Roll dynamic, contract viewer + signature, KPI dashboard.
 
 ## Architecture
-- **Backend**: FastAPI `/api/*`, MongoDB (Motor), bcrypt, ReportLab, smtplib (Gmail SSL). Sessions via `session_token` cookie + `user_sessions` collection (works for both Google OAuth and email/password).
-- **Frontend**: React 19, React Router v7, Tailwind, shadcn/ui, sonner, lucide-react, fonts Manrope+Outfit. AuthContext + ProtectedRoute + AdminOnly wrapper. Hash-based OAuth callback handled before protected routes.
+- **Backend**: FastAPI `/api/*`, MongoDB (Motor), bcrypt, ReportLab, smtplib (Gmail SSL), emergentintegrations Stripe Checkout, recharts series.
+- **Frontend**: React 19, React Router v7, Tailwind, shadcn/ui, sonner, lucide-react, Recharts, Manrope+Outfit fonts. AuthContext + ProtectedRoute + AdminOnly wrapper.
 
 ## Personas
-- **Administrador**: full portfolio, contracts CRUD, KPIs, ARCO tickets, audit log, email reminders
-- **Inquilino**: own contract only; can sign with canvas; download own PDF
+- **Administrador**: full portfolio, contracts CRUD, KPIs, ARCO tickets, audit log, email reminders, Stripe payment links, charts
+- **Inquilino**: own contract only; canvas signature; PDF; pay via emailed link
 
-## Implemented (Feb 2026 — iter 1+2)
-**Iter 1 (MVP)**
-- Login screen, Google OAuth, role switcher
-- Dashboard greeting + 4 KPIs + upcoming
-- Rent Roll (search, filter, status edit, auto-sum)
-- Contract grid + viewer modal
-- Properties grid
-- Demo seed (6 props, 5 contracts)
+## Implemented (Iter 1 + 2 + 3)
+**Iter 1 – MVP**: Login + Google OAuth, role switcher, dashboard greeting, 4 KPIs, upcoming, Rent Roll w/ status badges, contract viewer, demo seed.
 
-**Iter 2 (this iteration)**
-- ✅ Email/password authentication (bcrypt) coexisting with Google OAuth (same `session_token` cookie)
-- ✅ Seeded demo accounts: `admin@revant.mx / Revant2026!`, `jorge.tenant@revant.mx / Inquilino2026!`
-- ✅ Real signature canvas (mouse + touch, base64 PNG embedded in DB)
-- ✅ Server-side PDF (ReportLab) with embedded signature image, Mexican CCF clauses, LFPDPPP reference
-- ✅ Gmail SMTP service (smtplib SSL); falls back to "simulated" mode without credentials
-- ✅ Manual reminder per row (admin) + auto-run for vencimientos in next 7 days
-- ✅ ARCO public form `/arco-publico` (no auth) → POST `/api/arco`; confirmation email
-- ✅ ARCO admin ticket management `/arco` (estatus + notas)
-- ✅ Audit log `/audit` with timestamps for: contract.sign, contract.download_pdf, reminder.send_manual, reminder.run_auto, arco.update
-- ✅ Sidebar conditionally shows Admin sections (Solicitudes ARCO, Auditoría)
+**Iter 2 – Pro features**: Email/password auth (bcrypt + same session_token cookie), real signature canvas, ReportLab PDF, Gmail SMTP service, manual + auto reminders, ARCO public form + admin tickets + LFPDPPP confirmation email, audit log, AdminOnly routes.
+
+**Iter 3 – Enterprise + Cobranza**:
+- ✅ Forgot password (anti-enumeration) + Reset password page (token via URL or paste). Email contains both clickable button (using request origin) and raw token.
+- ✅ Brute-force protection: 5 fails / 15 min lockout, email-only identifier (cross-pod safe). Counter cleared on success.
+- ✅ Stripe Checkout integration (test key `sk_test_emergent`):
+  - POST `/api/payments/checkout` (admin) — server-side amount, `currency=mxn`, multi-month support
+  - GET `/api/payments/status/{session_id}` — polling with idempotent contract.estatus → 'pagado'
+  - POST `/api/webhook/stripe` — webhook with idempotent flip
+  - `payment_transactions` collection
+- ✅ Reminder emails embed Stripe "PAGAR AHORA" CTA when admin selects "Recordatorio + liga"
+- ✅ Frontend: RentRoll dropdown with 4 cobranza actions per row (1 mes / 3 meses / recordatorio+liga / recordatorio simple)
+- ✅ `/payment-success?session_id=...` polling page
+- ✅ Recharts on Dashboard (admin only): Line of last 12 months ingresos cobrados, Donut of status distribution, Bars of rent per property
+- ✅ Backend `/api/dashboard/series` provides aggregated chart data
+
+## Test Credentials (auto-seeded)
+| Email | Password | Role |
+|---|---|---|
+| admin@revant.mx | Revant2026! | admin |
+| jorge.tenant@revant.mx | Inquilino2026! | inquilino |
 
 ## Validation
-- Iter 1: Backend 16/16, Frontend 100%
-- Iter 2: Backend 22/22 pytest passing; Frontend verified via screenshots & testing agent (login, sidebar RBAC, ARCO public+admin, contract PDF, reminders simulated, audit page)
+- Iter 1: 16/16 backend, 100% frontend
+- Iter 2: 22/22 backend, 100% frontend
+- Iter 3: 17/17 backend pytest, 13/13 frontend Playwright
 
 ## Backlog
-- P0: User-provided GMAIL_USER + GMAIL_APP_PASSWORD to enable real email sending
-- P1: Brute-force protection on email/password login (lockout 5 fails / 15 min)
-- P1: Forgot/Reset password flow
-- P1: Stripe payments + auto-issue payment links in reminders
-- P2: Recharts charts (cashflow, occupancy timeline)
-- P2: Audit log: human-readable Spanish action labels (currently raw codes also shown)
-- P2: Bulk operations on Rent Roll (mass status change, mass reminder)
-- P2: SQL migration layer
+- P0: User to provide GMAIL_USER + GMAIL_APP_PASSWORD to switch reminders/ARCO emails from simulated to real
+- P1: Stripe **Subscriptions** mode (currently one-time per N months) — needs library extension
+- P1: Centralized rate limit (Redis) for cross-pod brute-force
+- P1: Webhook signature IP allowlist (Stripe production)
+- P2: Bulk operations on Rent Roll (mass reminder/charge)
+- P2: Multi-tenant org accounts, real-time webhooks via WebSocket
+- P2: Bilingual EN/ES toggle, dark mode
 
 ## Pending User Action
-Provide Gmail credentials (`GMAIL_USER`, `GMAIL_APP_PASSWORD`) to switch reminder + ARCO emails from simulated to live sending. Add to `/app/backend/.env` and restart backend.
+Add to `/app/backend/.env` and restart backend:
+```
+GMAIL_USER="tu-correo@gmail.com"
+GMAIL_APP_PASSWORD="xxxxxxxxxxxxxxxx"
+```

@@ -157,6 +157,7 @@ class LoginPayload(BaseModel):
 
 class ForgotPasswordPayload(BaseModel):
     email: EmailStr
+    origin: Optional[str] = None  # frontend origin for clickable reset link
 
 class ResetPasswordPayload(BaseModel):
     token: str
@@ -281,8 +282,7 @@ async def auth_register(payload: RegisterPayload, response: Response):
 @api_router.post("/auth/login")
 async def auth_login(payload: LoginPayload, request: Request, response: Response):
     email = payload.email.lower()
-    ip = request.client.host if request.client else "unknown"
-    identifier = f"{ip}:{email}"
+    identifier = f"email:{email}"  # email-only for cross-pod consistency
 
     # Brute-force lockout: 5 fails / 15 min
     attempt = await db.login_attempts.find_one({"identifier": identifier}, {"_id": 0})
@@ -326,17 +326,24 @@ async def forgot_password(payload: ForgotPasswordPayload):
             "used": False,
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
-        # Reset link MUST come from request origin in real app; here we log + email
-        link_path = f"/reset-password?token={token}"
-        logger.info("[PASSWORD RESET] %s -> %s", email, link_path)
+        origin = (payload.origin or "").rstrip("/")
+        link = f"{origin}/reset-password?token={token}" if origin else None
+        logger.info("[PASSWORD RESET] %s -> /reset-password?token=%s", email, token)
+        cta = (
+            f'<div style="text-align:center;margin:20px 0;">'
+            f'<a href="{link}" style="display:inline-block;background:#031433;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">Restablecer contraseña</a>'
+            f'</div>'
+        ) if link else ""
         html = f"""
         <div style="font-family:Arial;max-width:600px;margin:0 auto;color:#031433;">
           <div style="background:#031433;padding:24px;text-align:center;"><h1 style="color:#D3A154;margin:0;letter-spacing:2px;">REVANT</h1></div>
           <div style="padding:32px 24px;border:1px solid #e2e8f0;">
             <p style="font-size:12px;letter-spacing:2px;color:#D3A154;text-transform:uppercase;">Restablecer contraseña</p>
             <h2>Hola,</h2>
-            <p>Recibimos una solicitud para restablecer tu contraseña. Usa el siguiente token (válido por 1 hora):</p>
-            <p style="background:#f1f5f9;padding:16px;border-radius:6px;font-family:monospace;word-break:break-all;font-size:13px;">{token}</p>
+            <p>Recibimos una solicitud para restablecer tu contraseña. Este enlace caduca en 1 hora.</p>
+            {cta}
+            <p style="font-size:13px;color:#64748b;">O copia el siguiente token:</p>
+            <p style="background:#f1f5f9;padding:12px;border-radius:6px;font-family:monospace;word-break:break-all;font-size:12px;">{token}</p>
             <p style="font-size:13px;color:#64748b;">Si no solicitaste esto, ignora este correo.</p>
           </div>
         </div>
