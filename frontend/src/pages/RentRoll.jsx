@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Eye, Send, CreditCard } from "lucide-react";
+import { Search, Eye, Send, CreditCard, CheckSquare, Square } from "lucide-react";
 import { api, fmtMXN, fmtDate, daysUntil } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import StatusBadge from "../components/StatusBadge";
@@ -12,6 +12,7 @@ import ContractViewer from "../components/ContractViewer";
 import { toast } from "sonner";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuSeparator,
 } from "../components/ui/dropdown-menu";
 
 export default function RentRoll() {
@@ -20,6 +21,7 @@ export default function RentRoll() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState(null);
+  const [picked, setPicked] = useState(new Set());
 
   const load = async () => {
     const { data } = await api.get("/contracts");
@@ -77,6 +79,40 @@ export default function RentRoll() {
     }
   };
 
+  const togglePick = (id) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    if (picked.size === filtered.length) setPicked(new Set());
+    else setPicked(new Set(filtered.map(c => c.contract_id)));
+  };
+
+  const bulkRun = async (action, opts = {}) => {
+    const ids = Array.from(picked);
+    if (ids.length === 0) { toast.error("Selecciona al menos un contrato"); return; }
+    try {
+      const { data } = await api.post("/contracts/bulk", {
+        contract_ids: ids,
+        action,
+        origin: window.location.origin,
+        ...opts,
+      });
+      toast.success(`${data.processed} contrato(s) procesados`);
+      setPicked(new Set());
+      load();
+      // Open all checkout links if action was create_checkout
+      if (action === "create_checkout") {
+        data.items.filter(i => i.url).forEach(i => window.open(i.url, "_blank"));
+      }
+    } catch {
+      toast.error("Error en operación masiva");
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="rent-roll-page">
       {/* Summary strip */}
@@ -111,12 +147,77 @@ export default function RentRoll() {
         </Select>
       </div>
 
+      {/* Bulk action bar */}
+      {user?.role === "admin" && picked.size > 0 && (
+        <div className="bg-[#031433] text-white rounded-md px-5 py-3 flex items-center justify-between flex-wrap gap-3 shadow-md" data-testid="bulk-bar">
+          <p className="text-sm font-medium">
+            <span className="font-bold text-[#D3A154]">{picked.size}</span> contrato{picked.size !== 1 ? "s" : ""} seleccionado{picked.size !== 1 ? "s" : ""}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button data-testid="bulk-status" size="sm" variant="ghost"
+                        className="h-9 text-white hover:bg-white/10 hover:text-white">
+                  Cambiar estatus
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => bulkRun("set_status", { estatus: "pagado" })} data-testid="bulk-pagado">Marcar Pagado</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => bulkRun("set_status", { estatus: "pendiente" })} data-testid="bulk-pendiente">Marcar Pendiente</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => bulkRun("set_status", { estatus: "atrasado" })} data-testid="bulk-atrasado">Marcar Atrasado</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button data-testid="bulk-cobranza" size="sm"
+                        className="h-9 bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90">
+                  Cobranza masiva
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-slate-400">Recordatorios</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => bulkRun("send_reminder")} data-testid="bulk-remind">
+                  Enviar recordatorio simple
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => bulkRun("send_reminder", { include_payment_link: true })} data-testid="bulk-remind-link">
+                  Enviar recordatorio + liga de pago
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-slate-400">Ligas de pago</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => bulkRun("create_checkout", { months: 1 })} data-testid="bulk-checkout-1">
+                  Crear liga (1 mes c/u)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => bulkRun("create_checkout", { months: 3 })} data-testid="bulk-checkout-3">
+                  Crear liga (3 meses c/u)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button data-testid="bulk-clear" size="sm" variant="ghost"
+                    onClick={() => setPicked(new Set())}
+                    className="h-9 text-white/70 hover:bg-white/10 hover:text-white">
+              Limpiar
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr className="text-left">
+                {user?.role === "admin" && (
+                  <Th className="w-10">
+                    <button onClick={toggleAll} data-testid="select-all" className="text-slate-500 hover:text-[#031433]">
+                      {picked.size === filtered.length && filtered.length > 0
+                        ? <CheckSquare className="w-4 h-4 text-[#D3A154]" />
+                        : <Square className="w-4 h-4" />}
+                    </button>
+                  </Th>
+                )}
                 <Th>Inquilino</Th>
                 <Th>Propiedad</Th>
                 <Th>Monto</Th>
@@ -127,12 +228,22 @@ export default function RentRoll() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-500">Sin resultados.</td></tr>
+                <tr><td colSpan={user?.role === "admin" ? 7 : 6} className="px-6 py-12 text-center text-slate-500">Sin resultados.</td></tr>
               )}
               {filtered.map((c) => {
                 const d = daysUntil(c.fecha_vencimiento);
+                const isPicked = picked.has(c.contract_id);
                 return (
-                  <tr key={c.contract_id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors" data-testid={`row-${c.contract_id}`}>
+                  <tr key={c.contract_id} className={`border-b border-slate-100 transition-colors ${isPicked ? "bg-[#D3A154]/5" : "hover:bg-slate-50"}`} data-testid={`row-${c.contract_id}`}>
+                    {user?.role === "admin" && (
+                      <td className="px-6 py-4">
+                        <button onClick={() => togglePick(c.contract_id)} data-testid={`pick-${c.contract_id}`} className="text-slate-500 hover:text-[#031433]">
+                          {isPicked
+                            ? <CheckSquare className="w-4 h-4 text-[#D3A154]" />
+                            : <Square className="w-4 h-4" />}
+                        </button>
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <p className="font-semibold text-[#031433]">{c.inquilino_nombre}</p>
                       <p className="text-xs text-slate-500">{c.inquilino_email}</p>

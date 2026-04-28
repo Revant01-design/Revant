@@ -151,6 +151,15 @@ class RegisterPayload(BaseModel):
     password: str = Field(min_length=6)
     name: str = Field(min_length=2)
 
+class BulkAction(BaseModel):
+    contract_ids: List[str] = Field(min_length=1, max_length=200)
+    action: Literal["set_status", "send_reminder", "create_checkout"]
+    estatus: Optional[Literal["pagado", "pendiente", "atrasado"]] = None
+    include_payment_link: bool = False
+    origin: Optional[str] = None
+    months: int = 1
+
+
 class LoginPayload(BaseModel):
     email: EmailStr
     password: str
@@ -652,6 +661,97 @@ async def get_audit_log(limit: int = 200, user: User = Depends(get_current_user)
     docs = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return [AuditLogModel(**d) for d in docs]
 
+# ------------- Bulk operations on Rent Roll -------------
+@api_router.post("/contracts/bulk")
+async def contracts_bulk(payload: BulkAction, request: Request, user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    contracts = await db.contracts.find({"contract_id": {"$in": payload.contract_ids}}, {"_id": 0}).to_list(500)
+    found_ids = {c["contract_id"] for c in contracts}
+    missing = [cid for cid in payload.contract_ids if cid not in found_ids]
+    results = []
+
+    if payload.action == "set_status":
+        if not payload.estatus:
+            raise HTTPException(status_code=400, detail="estatus requerido")
+        await db.contracts.update_many(
+            {"contract_id": {"$in": list(found_ids)}},
+            {"$set": {"estatus": payload.estatus}},
+        )
+        results = [{"contract_id": cid, "ok": True, "estatus": payload.estatus} for cid in found_ids]
+
+    elif payload.action == "send_reminder":
+        for c in contracts:
+            try:
+                fv = datetime.fromisoformat(c["fecha_vencimiento"]).date()
+            except Exception:
+                fv = datetime.now(timezone.utc).date()
+            days = (fv - datetime.now(timezone.utc).date()).days
+            payment_link = None
+            if payload.include_payment_link and payload.origin:
+                try:
+                    host_url = str(request.base_url)
+                    origin = payload.origin.rstrip("/")
+                    sess = await create_contract_checkout(
+                        host_url=host_url, amount=float(c["monto_renta"]), currency="mxn",
+                        success_url=f"{origin}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
+                        cancel_url=f"{origin}/rent-roll",
+                        metadata={"contract_id": c["contract_id"], "inquilino_email": c["inquilino_email"], "kind": "rent_payment", "months": "1"},
+                    )
+                    payment_link = sess.url
+                    await db.payment_transactions.insert_one({
+                        "session_id": sess.session_id, "contract_id": c["contract_id"],
+                        "inquilino_email": c["inquilino_email"], "amount": float(c["monto_renta"]),
+                        "currency": "mxn", "months": 1, "metadata": {"kind": "rent_payment"},
+                        "payment_status": "initiated", "status": "open",
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "via": "bulk_reminder",
+                    })
+                except Exception as e:
+                    logger.warning("bulk checkout fail for %s: %s", c["contract_id"], e)
+            html = render_reminder_html(c["inquilino_nombre"], c["propiedad_nombre"],
+                                        f"${c['monto_renta']:,.0f} MXN", fv.strftime("%d/%m/%Y"),
+                                        days, payment_link=payment_link)
+            res = await send_email(c["inquilino_email"], f"Recordatorio: renta {c['propiedad_nombre']}", html)
+            results.append({"contract_id": c["contract_id"], "to": c["inquilino_email"], **res})
+        await log_audit(db, user=user, action="reminder.bulk",
+                        details={"count": len(results), "with_link": payload.include_payment_link})
+
+    elif payload.action == "create_checkout":
+        if not payload.origin:
+            raise HTTPException(status_code=400, detail="origin requerido")
+        host_url = str(request.base_url)
+        origin = payload.origin.rstrip("/")
+        for c in contracts:
+            amount = float(c["monto_renta"]) * payload.months
+            try:
+                sess = await create_contract_checkout(
+                    host_url=host_url, amount=amount, currency="mxn",
+                    success_url=f"{origin}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{origin}/rent-roll",
+                    metadata={"contract_id": c["contract_id"], "inquilino_email": c["inquilino_email"], "kind": "rent_payment", "months": str(payload.months)},
+                )
+                await db.payment_transactions.insert_one({
+                    "session_id": sess.session_id, "contract_id": c["contract_id"],
+                    "inquilino_email": c["inquilino_email"], "amount": amount, "currency": "mxn",
+                    "months": payload.months, "metadata": {"kind": "rent_payment"},
+                    "payment_status": "initiated", "status": "open",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "via": "bulk_checkout",
+                })
+                results.append({"contract_id": c["contract_id"], "url": sess.url, "session_id": sess.session_id, "amount": amount})
+            except Exception as e:
+                logger.warning("bulk checkout fail for %s: %s", c["contract_id"], e)
+                results.append({"contract_id": c["contract_id"], "error": str(e)})
+        await log_audit(db, user=user, action="payment.bulk_checkout",
+                        details={"count": len(results), "months": payload.months})
+
+    return {"processed": len(results), "missing": missing, "items": results}
+
+
 # ------------- Stripe Payments -------------
 @api_router.post("/payments/checkout")
 async def create_checkout(payload: CheckoutMonthsPayload, request: Request, user: User = Depends(get_current_user)):
@@ -725,6 +825,9 @@ async def payments_status(session_id: str, request: Request):
 
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
+    # Log inbound IP for audit (not blocking — only informative per user choice)
+    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    logger.info("[STRIPE WEBHOOK] inbound from IP=%s", client_ip)
     body = await request.body()
     sig = request.headers.get("Stripe-Signature", "")
     host_url = str(request.base_url)
@@ -741,6 +844,17 @@ async def stripe_webhook(request: Request):
                 {"$set": {"payment_status": "paid", "status": "complete", "updated_at": datetime.now(timezone.utc).isoformat()}},
             )
             await db.contracts.update_one({"contract_id": tx["contract_id"]}, {"$set": {"estatus": "pagado"}})
+            try:
+                await db.audit_logs.insert_one({
+                    "log_id": f"log_{uuid.uuid4().hex[:12]}",
+                    "user_id": None, "user_email": tx.get("inquilino_email"), "user_role": None,
+                    "action": "payment.webhook_paid",
+                    "target_type": "contract", "target_id": tx["contract_id"],
+                    "details": {"session_id": ev.session_id, "ip": client_ip, "amount": tx.get("amount")},
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                })
+            except Exception:
+                pass
     return {"ok": True}
 
 # ------------- Charts series -------------
