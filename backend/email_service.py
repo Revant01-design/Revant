@@ -12,19 +12,19 @@ from email.mime.application import MIMEApplication
 
 logger = logging.getLogger(__name__)
 
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 465
 
 
 def _send_sync(to: str, subject: str, html: str, attachments: list | None = None) -> dict:
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+    gmail_user = os.environ.get("GMAIL_USER")
+    gmail_pw = os.environ.get("GMAIL_APP_PASSWORD")
+    if not gmail_user or not gmail_pw:
         logger.warning("[EMAIL SIMULATED] to=%s subject=%s", to, subject)
         return {"sent": False, "simulated": True, "reason": "missing_credentials"}
 
     msg = MIMEMultipart("mixed")
-    msg["From"] = f"Revant <{GMAIL_USER}>"
+    msg["From"] = f"Revant <{gmail_user}>"
     msg["To"] = to
     msg["Subject"] = subject
 
@@ -38,7 +38,7 @@ def _send_sync(to: str, subject: str, html: str, attachments: list | None = None
         msg.attach(part)
 
     with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        server.login(gmail_user, gmail_pw)
         server.send_message(msg)
     return {"sent": True, "simulated": False}
 
