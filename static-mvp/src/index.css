@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #FFFFFF;
+    color: #031433;
+}
+
+.font-display {
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    letter-spacing: -0.02em;
+}
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 219 89% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 219 89% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 219 89% 11%;
+        --primary: 219 89% 11%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 219 20% 96%;
+        --secondary-foreground: 219 89% 11%;
+        --muted: 219 20% 96%;
+        --muted-foreground: 219 10% 40%;
+        --accent: 36 60% 58%;
+        --accent-foreground: 219 89% 11%;
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 219 20% 90%;
+        --input: 219 20% 90%;
+        --ring: 219 89% 11%;
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+    body { @apply bg-background text-foreground; }
+    h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d6dbe6; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #b9c0d0; }
+
+/* Signature font for contract signing simulation */
+.font-signature { font-family: 'Brush Script MT', 'Lucida Handwriting', cursive; }
+
+/* Hover lift utility */
+.lift-hover { transition: transform 200ms ease, box-shadow 200ms ease; }
+.lift-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -12px rgba(3, 20, 51, 0.25); }
