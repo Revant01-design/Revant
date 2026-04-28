@@ -54,9 +54,20 @@ export default function Dashboard() {
           </p>
         </div>
         {kpis && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-md">
-            <ArrowUpRight className="w-4 h-4 text-emerald-700" />
-            <span className="text-sm font-semibold text-emerald-700">{fmtMXN(kpis.rentas_cobradas)} cobrados</span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-md">
+              <ArrowUpRight className="w-4 h-4 text-emerald-700" />
+              <span className="text-sm font-semibold text-emerald-700">{fmtMXN(kpis.rentas_cobradas)} cobrados</span>
+            </div>
+            {user?.role === "admin" && (
+              <Button
+                data-testid="run-auto-reminders"
+                onClick={runAutoReminders}
+                className="h-10 bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90 transition-all duration-200"
+              >
+                <Send className="w-4 h-4 mr-2" /> Ejecutar recordatorios
+              </Button>
+            )}
           </div>
         )}
       </div>
