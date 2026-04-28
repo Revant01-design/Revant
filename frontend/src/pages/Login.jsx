@@ -115,6 +115,11 @@ export default function Login() {
                 <FieldGroup icon={Lock} label="Contraseña">
                   <Input type="password" required value={form.password} onChange={set("password")} className="h-11 pl-10" placeholder="••••••••" data-testid="login-password" />
                 </FieldGroup>
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-xs text-slate-500 hover:text-[#031433] font-medium underline decoration-[#D3A154] underline-offset-4" data-testid="forgot-link">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
                 <Button type="submit" disabled={loading} data-testid="login-submit"
                         className="w-full h-12 bg-[#031433] text-white hover:bg-[#031433]/90 transition-all duration-200">
                   {loading ? "Ingresando…" : "Ingresar"}

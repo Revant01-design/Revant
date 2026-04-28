@@ -12,6 +12,9 @@ import Properties from "./pages/Properties";
 import ArcoPublic from "./pages/ArcoPublic";
 import ArcoAdmin from "./pages/ArcoAdmin";
 import AuditLog from "./pages/AuditLog";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function HomeRedirect() {
@@ -35,6 +38,9 @@ function AppRouter() {
     <Routes>
       <Route path="/" element={<HomeRedirect />} />
       <Route path="/arco-publico" element={<ArcoPublic />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/rent-roll" element={<RentRoll />} />

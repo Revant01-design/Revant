@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Eye, Send } from "lucide-react";
+import { Search, Eye, Send, CreditCard } from "lucide-react";
 import { api, fmtMXN, fmtDate, daysUntil } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import StatusBadge from "../components/StatusBadge";
@@ -10,6 +10,9 @@ import {
 import { Button } from "../components/ui/button";
 import ContractViewer from "../components/ContractViewer";
 import { toast } from "sonner";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 export default function RentRoll() {
   const { user } = useAuth();
@@ -44,16 +47,33 @@ export default function RentRoll() {
     load();
   };
 
-  const sendReminder = async (id) => {
+  const sendReminder = async (id, withLink = false) => {
     try {
-      const { data } = await api.post(`/contracts/${id}/remind`);
+      const { data } = await api.post(`/contracts/${id}/remind`, {
+        include_payment_link: withLink,
+        origin: window.location.origin,
+      });
       if (data.simulated) {
-        toast.success("Recordatorio simulado (configura GMAIL_USER + GMAIL_APP_PASSWORD para enviar real)");
+        toast.success(withLink ? "Recordatorio (con liga) simulado" : "Recordatorio simulado");
       } else {
-        toast.success(`Recordatorio enviado a ${data.to}`);
+        toast.success(`Recordatorio enviado a ${data.to}${withLink ? " · con liga de pago" : ""}`);
       }
     } catch {
       toast.error("Error al enviar recordatorio");
+    }
+  };
+
+  const createCheckout = async (id, months = 1) => {
+    try {
+      const { data } = await api.post(`/payments/checkout`, {
+        contract_id: id,
+        origin: window.location.origin,
+        months,
+      });
+      window.open(data.url, "_blank");
+      toast.success("Liga de pago abierta en nueva pestaña");
+    } catch {
+      toast.error("Error al crear liga de pago");
     }
   };
 
@@ -142,15 +162,32 @@ export default function RentRoll() {
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-1">
                         {user?.role === "admin" && (
-                          <Button
-                            data-testid={`remind-${c.contract_id}`}
-                            onClick={() => sendReminder(c.contract_id)}
-                            variant="ghost" size="sm"
-                            title="Enviar recordatorio por email"
-                            className="h-9 hover:bg-[#D3A154] hover:text-[#031433] text-[#031433] transition-all duration-200"
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                data-testid={`pay-${c.contract_id}`}
+                                variant="ghost" size="sm"
+                                title="Cobranza"
+                                className="h-9 hover:bg-[#D3A154] hover:text-[#031433] text-[#031433] transition-all duration-200"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-64">
+                              <DropdownMenuItem data-testid={`checkout-1m-${c.contract_id}`} onClick={() => createCheckout(c.contract_id, 1)}>
+                                Crear liga de pago (1 mes)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem data-testid={`checkout-3m-${c.contract_id}`} onClick={() => createCheckout(c.contract_id, 3)}>
+                                Crear liga de pago (3 meses)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem data-testid={`remind-link-${c.contract_id}`} onClick={() => sendReminder(c.contract_id, true)}>
+                                Enviar recordatorio + liga de pago
+                              </DropdownMenuItem>
+                              <DropdownMenuItem data-testid={`remind-${c.contract_id}`} onClick={() => sendReminder(c.contract_id, false)}>
+                                Enviar recordatorio simple
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                         <Button
                           data-testid={`view-${c.contract_id}`}

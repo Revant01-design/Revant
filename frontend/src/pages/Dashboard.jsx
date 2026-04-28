@@ -4,6 +4,7 @@ import { api, fmtMXN, fmtDate, daysUntil } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import KpiCard from "../components/KpiCard";
 import StatusBadge from "../components/StatusBadge";
+import DashboardCharts from "../components/DashboardCharts";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 
@@ -104,6 +105,9 @@ export default function Dashboard() {
           icon={AlertTriangle}
         />
       </div>
+
+      {/* Charts */}
+      {user?.role === "admin" && <DashboardCharts />}
 
       {/* Upcoming */}
       <div className="bg-white border border-slate-200 rounded-md">

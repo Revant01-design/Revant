@@ -47,9 +47,17 @@ async def send_email(to: str, subject: str, html: str, attachments: list | None 
     return await asyncio.to_thread(_send_sync, to, subject, html, attachments)
 
 
-def render_reminder_html(name: str, property_name: str, monto: str, fecha: str, days: int) -> str:
+def render_reminder_html(name: str, property_name: str, monto: str, fecha: str, days: int, payment_link: str | None = None) -> str:
     urgency = "vence hoy" if days == 0 else (f"vence en {days} día{'s' if days != 1 else ''}" if days > 0 else f"venció hace {abs(days)} día{'s' if abs(days) != 1 else ''}")
     color = "#DC2626" if days <= 0 else ("#D3A154" if days <= 7 else "#031433")
+    cta = ""
+    if payment_link:
+        cta = f"""
+        <div style="text-align:center;margin:24px 0 8px;">
+          <a href="{payment_link}" style="display:inline-block;background:#D3A154;color:#031433;padding:14px 28px;font-weight:700;text-decoration:none;border-radius:6px;font-size:14px;letter-spacing:0.5px;">PAGAR AHORA</a>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;text-align:center;margin:0;">Pago seguro vía Stripe · Acepta tarjetas de crédito y débito</p>
+        """
     return f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #031433;">
       <div style="background: #031433; padding: 24px; text-align: center;">
@@ -63,7 +71,8 @@ def render_reminder_html(name: str, property_name: str, monto: str, fecha: str, 
           <tr><td style="padding: 12px; background: #f8fafc; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">Monto</td><td style="padding: 12px; font-weight: 600; font-size: 16px;">{monto}</td></tr>
           <tr><td style="padding: 12px; background: #f8fafc; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; border-top: 1px solid #e2e8f0;">Fecha de vencimiento</td><td style="padding: 12px; font-weight: 600; color: {color}; border-top: 1px solid #e2e8f0;">{fecha}</td></tr>
         </table>
-        <p style="font-size: 13px; color: #64748b; line-height: 1.6;">Si ya realizaste el pago, ignora este mensaje. Para cualquier aclaración, responde a este correo.</p>
+        {cta}
+        <p style="font-size: 13px; color: #64748b; line-height: 1.6;">Si ya realizaste el pago, ignora este mensaje.</p>
       </div>
       <div style="padding: 16px 24px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; border-top: none;">
         <p style="font-size: 11px; color: #94a3b8; margin: 0;">Revant · Plataforma de administración inmobiliaria · LFPDPPP</p>

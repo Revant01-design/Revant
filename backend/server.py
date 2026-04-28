@@ -14,10 +14,12 @@ from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
 
 import bcrypt
+import secrets
 
 from email_service import send_email, render_reminder_html, render_arco_received_html
 from pdf_service import generate_contract_pdf
 from audit import log_audit
+from payments_service import create_contract_checkout, get_status as stripe_get_status, handle_webhook as stripe_handle_webhook
 
 
 def hash_password(pw: str) -> str:
@@ -153,6 +155,20 @@ class LoginPayload(BaseModel):
     email: EmailStr
     password: str
 
+class ForgotPasswordPayload(BaseModel):
+    email: EmailStr
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    password: str = Field(min_length=6)
+
+class CheckoutPayload(BaseModel):
+    contract_id: str
+    origin: str  # window.location.origin from frontend
+
+class CheckoutMonthsPayload(CheckoutPayload):
+    months: int = Field(default=1, ge=1, le=12)
+
 async def get_current_user(request: Request) -> User:
     token = request.cookies.get("session_token")
     if not token:
@@ -263,17 +279,86 @@ async def auth_register(payload: RegisterPayload, response: Response):
     return {"user": User(**user_doc).model_dump(), "session_token": token}
 
 @api_router.post("/auth/login")
-async def auth_login(payload: LoginPayload, response: Response):
+async def auth_login(payload: LoginPayload, request: Request, response: Response):
     email = payload.email.lower()
+    ip = request.client.host if request.client else "unknown"
+    identifier = f"{ip}:{email}"
+
+    # Brute-force lockout: 5 fails / 15 min
+    attempt = await db.login_attempts.find_one({"identifier": identifier}, {"_id": 0})
+    if attempt and attempt.get("count", 0) >= 5:
+        locked_until = attempt.get("locked_until")
+        if isinstance(locked_until, str):
+            locked_until = datetime.fromisoformat(locked_until)
+        if locked_until and locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        if locked_until and locked_until > datetime.now(timezone.utc):
+            mins = int((locked_until - datetime.now(timezone.utc)).total_seconds() // 60) + 1
+            raise HTTPException(status_code=429, detail=f"Demasiados intentos. Intenta de nuevo en {mins} min.")
+
     user_doc = await db.users.find_one({"email": email}, {"_id": 0})
-    if not user_doc or not user_doc.get("password_hash"):
+    if not user_doc or not user_doc.get("password_hash") or not verify_password(payload.password, user_doc["password_hash"]):
+        new_count = (attempt.get("count", 0) if attempt else 0) + 1
+        update = {"identifier": identifier, "count": new_count, "last_attempt": datetime.now(timezone.utc).isoformat()}
+        if new_count >= 5:
+            update["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+        await db.login_attempts.update_one({"identifier": identifier}, {"$set": update}, upsert=True)
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
-    if not verify_password(payload.password, user_doc["password_hash"]):
-        raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
+
+    await db.login_attempts.delete_one({"identifier": identifier})
     token = await _create_session_token(user_doc["user_id"])
     _set_session_cookie(response, token)
     user_doc.pop("password_hash", None)
     return {"user": User(**user_doc).model_dump(), "session_token": token}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(payload: ForgotPasswordPayload):
+    email = payload.email.lower()
+    user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+    # Always return success to avoid user enumeration
+    if user_doc:
+        token = secrets.token_urlsafe(32)
+        await db.password_reset_tokens.insert_one({
+            "token": token,
+            "user_id": user_doc["user_id"],
+            "email": email,
+            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+            "used": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        # Reset link MUST come from request origin in real app; here we log + email
+        link_path = f"/reset-password?token={token}"
+        logger.info("[PASSWORD RESET] %s -> %s", email, link_path)
+        html = f"""
+        <div style="font-family:Arial;max-width:600px;margin:0 auto;color:#031433;">
+          <div style="background:#031433;padding:24px;text-align:center;"><h1 style="color:#D3A154;margin:0;letter-spacing:2px;">REVANT</h1></div>
+          <div style="padding:32px 24px;border:1px solid #e2e8f0;">
+            <p style="font-size:12px;letter-spacing:2px;color:#D3A154;text-transform:uppercase;">Restablecer contraseña</p>
+            <h2>Hola,</h2>
+            <p>Recibimos una solicitud para restablecer tu contraseña. Usa el siguiente token (válido por 1 hora):</p>
+            <p style="background:#f1f5f9;padding:16px;border-radius:6px;font-family:monospace;word-break:break-all;font-size:13px;">{token}</p>
+            <p style="font-size:13px;color:#64748b;">Si no solicitaste esto, ignora este correo.</p>
+          </div>
+        </div>
+        """
+        await send_email(email, "Restablece tu contraseña — Revant", html)
+    return {"ok": True, "message": "Si el correo existe, recibirás instrucciones."}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(payload: ResetPasswordPayload):
+    rec = await db.password_reset_tokens.find_one({"token": payload.token, "used": False}, {"_id": 0})
+    if not rec:
+        raise HTTPException(status_code=400, detail="Token inválido o ya utilizado")
+    expires_at = rec["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Token expirado")
+    await db.users.update_one({"user_id": rec["user_id"]}, {"$set": {"password_hash": hash_password(payload.password)}})
+    await db.password_reset_tokens.update_one({"token": payload.token}, {"$set": {"used": True}})
+    return {"ok": True}
 
 @api_router.get("/auth/me", response_model=User)
 async def me(user: User = Depends(get_current_user)):
@@ -383,8 +468,12 @@ async def contract_pdf(contract_id: str, user: User = Depends(get_current_user))
         headers={"Content-Disposition": f'attachment; filename="contrato_{contract_id}.pdf"'},
     )
 
+class RemindPayload(BaseModel):
+    include_payment_link: bool = False
+    origin: Optional[str] = None  # window.location.origin
+
 @api_router.post("/contracts/{contract_id}/remind")
-async def send_reminder(contract_id: str, user: User = Depends(get_current_user)):
+async def send_reminder(contract_id: str, payload: RemindPayload | None = None, request: Request = None, user: User = Depends(get_current_user)):
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     doc = await db.contracts.find_one({"contract_id": contract_id}, {"_id": 0})
@@ -394,11 +483,42 @@ async def send_reminder(contract_id: str, user: User = Depends(get_current_user)
     days = (fv - datetime.now(timezone.utc).date()).days
     monto_str = f"${doc['monto_renta']:,.0f} MXN"
     fecha_str = fv.strftime("%d/%m/%Y")
-    html = render_reminder_html(doc["inquilino_nombre"], doc["propiedad_nombre"], monto_str, fecha_str, days)
+
+    payment_link = None
+    if payload and payload.include_payment_link and payload.origin and request:
+        try:
+            host_url = str(request.base_url)
+            origin = payload.origin.rstrip("/")
+            success_url = f"{origin}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
+            cancel_url = f"{origin}/rent-roll"
+            session = await create_contract_checkout(
+                host_url=host_url, amount=float(doc["monto_renta"]), currency="mxn",
+                success_url=success_url, cancel_url=cancel_url,
+                metadata={"contract_id": contract_id, "inquilino_email": doc["inquilino_email"], "kind": "rent_payment", "months": "1"},
+            )
+            payment_link = session.url
+            await db.payment_transactions.insert_one({
+                "session_id": session.session_id,
+                "contract_id": contract_id,
+                "inquilino_email": doc["inquilino_email"],
+                "amount": float(doc["monto_renta"]),
+                "currency": "mxn",
+                "months": 1,
+                "metadata": {"contract_id": contract_id, "kind": "rent_payment"},
+                "payment_status": "initiated",
+                "status": "open",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "via": "reminder_email",
+            })
+        except Exception as e:
+            logger.warning("checkout link creation failed: %s", e)
+
+    html = render_reminder_html(doc["inquilino_nombre"], doc["propiedad_nombre"], monto_str, fecha_str, days, payment_link=payment_link)
     res = await send_email(doc["inquilino_email"], f"Recordatorio: renta {doc['propiedad_nombre']}", html)
     await log_audit(db, user=user, action="reminder.send_manual", target_type="contract", target_id=contract_id,
-                    details={"to": doc["inquilino_email"], "result": res})
-    return {"contract_id": contract_id, "to": doc["inquilino_email"], **res}
+                    details={"to": doc["inquilino_email"], "result": res, "payment_link": bool(payment_link)})
+    return {"contract_id": contract_id, "to": doc["inquilino_email"], "payment_link": payment_link, **res}
 
 @api_router.post("/notifications/run-auto-reminders")
 async def run_auto_reminders(user: User = Depends(get_current_user)):
@@ -524,6 +644,137 @@ async def get_audit_log(limit: int = 200, user: User = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="Solo admin")
     docs = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return [AuditLogModel(**d) for d in docs]
+
+# ------------- Stripe Payments -------------
+@api_router.post("/payments/checkout")
+async def create_checkout(payload: CheckoutMonthsPayload, request: Request, user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    contract = await db.contracts.find_one({"contract_id": payload.contract_id}, {"_id": 0})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contrato no encontrado")
+
+    # Server-side amount only (security)
+    amount = float(contract["monto_renta"]) * payload.months
+    origin = payload.origin.rstrip("/")
+    success_url = f"{origin}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/rent-roll"
+
+    host_url = str(request.base_url)
+    metadata = {
+        "contract_id": payload.contract_id,
+        "inquilino_email": contract["inquilino_email"],
+        "months": str(payload.months),
+        "kind": "rent_payment",
+    }
+    session = await create_contract_checkout(
+        host_url=host_url, amount=amount, currency="mxn",
+        success_url=success_url, cancel_url=cancel_url, metadata=metadata,
+    )
+
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "contract_id": payload.contract_id,
+        "inquilino_email": contract["inquilino_email"],
+        "amount": amount,
+        "currency": "mxn",
+        "months": payload.months,
+        "metadata": metadata,
+        "payment_status": "initiated",
+        "status": "open",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    })
+    await log_audit(db, user=user, action="payment.checkout_create",
+                    target_type="contract", target_id=payload.contract_id,
+                    details={"session_id": session.session_id, "amount": amount, "months": payload.months})
+    return {"url": session.url, "session_id": session.session_id, "amount": amount}
+
+@api_router.get("/payments/status/{session_id}")
+async def payments_status(session_id: str, request: Request):
+    """Public polling endpoint (success page calls this with session_id)."""
+    tx = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    host_url = str(request.base_url)
+    try:
+        s = await stripe_get_status(host_url, session_id)
+    except Exception as e:
+        logger.exception("stripe status: %s", e)
+        return {"payment_status": tx.get("payment_status"), "status": tx.get("status"), "amount_total": int(tx["amount"] * 100), "currency": tx["currency"]}
+
+    update = {"payment_status": s.payment_status, "status": s.status, "updated_at": datetime.now(timezone.utc).isoformat()}
+    await db.payment_transactions.update_one({"session_id": session_id}, {"$set": update})
+
+    # idempotent: only mark contract as paid once
+    if s.payment_status == "paid" and tx.get("payment_status") != "paid":
+        await db.contracts.update_one({"contract_id": tx["contract_id"]}, {"$set": {"estatus": "pagado"}})
+
+    return {
+        "payment_status": s.payment_status, "status": s.status,
+        "amount_total": s.amount_total, "currency": s.currency,
+        "metadata": s.metadata,
+    }
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    body = await request.body()
+    sig = request.headers.get("Stripe-Signature", "")
+    host_url = str(request.base_url)
+    try:
+        ev = await stripe_handle_webhook(host_url, body, sig)
+    except Exception as e:
+        logger.exception("webhook err: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid webhook")
+    if ev.payment_status == "paid" and ev.session_id:
+        tx = await db.payment_transactions.find_one({"session_id": ev.session_id}, {"_id": 0})
+        if tx and tx.get("payment_status") != "paid":
+            await db.payment_transactions.update_one(
+                {"session_id": ev.session_id},
+                {"$set": {"payment_status": "paid", "status": "complete", "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+            await db.contracts.update_one({"contract_id": tx["contract_id"]}, {"$set": {"estatus": "pagado"}})
+    return {"ok": True}
+
+# ------------- Charts series -------------
+@api_router.get("/dashboard/series")
+async def dashboard_series(user: User = Depends(get_current_user)):
+    """Returns 3 series for charts: monthly cashflow, status distribution, occupation by property."""
+    await ensure_demo_data()
+    query = {} if user.role == "admin" else {"inquilino_email": user.email}
+    contracts = await db.contracts.find(query, {"_id": 0}).to_list(500)
+    properties = await db.properties.find({}, {"_id": 0}).to_list(500)
+
+    # Cashflow last 12 months (demo: spread sum across recent months)
+    now = datetime.now(timezone.utc)
+    months = []
+    monthly_total = sum(c["monto_renta"] for c in contracts if c["estatus"] == "pagado")
+    for i in range(11, -1, -1):
+        m = (now - timedelta(days=30 * i))
+        # demo: vary by 0.7-1.0 factor for visual interest
+        factor = 0.65 + ((11 - i) % 5) * 0.07
+        months.append({
+            "month": m.strftime("%b %Y"),
+            "ingresos": round(monthly_total * factor),
+        })
+
+    # Status distribution
+    status_count = {"pagado": 0, "pendiente": 0, "atrasado": 0}
+    for c in contracts:
+        status_count[c["estatus"]] = status_count.get(c["estatus"], 0) + 1
+    status_data = [{"name": k.capitalize(), "value": v} for k, v in status_count.items()]
+
+    # By property (top 8)
+    by_property = []
+    for p in properties[:8]:
+        match = next((c for c in contracts if c["property_id"] == p["property_id"]), None)
+        by_property.append({
+            "propiedad": p["nombre"][:18],
+            "monto": match["monto_renta"] if match else 0,
+            "ocupada": p["ocupada"],
+        })
+
+    return {"cashflow": months, "status": status_data, "by_property": by_property}
 
 @api_router.get("/")
 async def root():
