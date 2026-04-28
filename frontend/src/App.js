@@ -9,6 +9,9 @@ import Dashboard from "./pages/Dashboard";
 import RentRoll from "./pages/RentRoll";
 import Contracts from "./pages/Contracts";
 import Properties from "./pages/Properties";
+import ArcoPublic from "./pages/ArcoPublic";
+import ArcoAdmin from "./pages/ArcoAdmin";
+import AuditLog from "./pages/AuditLog";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function HomeRedirect() {
@@ -17,20 +20,28 @@ function HomeRedirect() {
   return user ? <Navigate to="/dashboard" replace /> : <Login />;
 }
 
+function AdminOnly({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== "admin") return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function AppRouter() {
   const location = useLocation();
-  // CRITICAL: handle session_id BEFORE protected routes
   if (location.hash?.includes("session_id=")) {
     return <AuthCallback />;
   }
   return (
     <Routes>
       <Route path="/" element={<HomeRedirect />} />
+      <Route path="/arco-publico" element={<ArcoPublic />} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/rent-roll" element={<RentRoll />} />
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/properties" element={<Properties />} />
+        <Route path="/arco" element={<AdminOnly><ArcoAdmin /></AdminOnly>} />
+        <Route path="/audit" element={<AdminOnly><AuditLog /></AdminOnly>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

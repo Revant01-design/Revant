@@ -8,6 +8,8 @@ const META = {
   "/rent-roll":   { title: "Rent Roll", subtitle: "Gestión de rentas" },
   "/contracts":   { title: "Contratos Digitales", subtitle: "Documentos legales" },
   "/properties":  { title: "Portafolio", subtitle: "Propiedades" },
+  "/arco":        { title: "Solicitudes ARCO", subtitle: "LFPDPPP" },
+  "/audit":       { title: "Registro de auditoría", subtitle: "Trazabilidad" },
 };
 
 export default function Layout() {

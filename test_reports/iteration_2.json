@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 2 testing: 22/22 backend tests PASS (auth register/login/me, contract sign w/ signature image persistence, PDF download admin+tenant owner+403 cross-tenant, manual & auto reminders simulated, ARCO public POST + admin GET/PATCH + 403 for tenant, audit log returns sign/pdf/reminder/arco entries in desc order). Frontend mostly works after fixing a SyntaxError in Dashboard.jsx (duplicated leftover lines after the function close). Tabs login/register + Google + ARCO link render; bad-password shows toast; admin sidebar shows 'Solicitudes ARCO' + 'Auditoría', tenant sidebar correctly hides them; rent-roll has 5 send-reminder icons (admin); /audit + /arco admin pages load; /arco-publico public form submits and shows folio. CRITICAL FRONTEND BUG: Dashboard 'Ejecutar recordatorios' button is MISSING from JSX (runAutoReminders fn is defined but no button renders it; Send icon imported unused). Contract viewer modal opens with 'Descargar PDF' button but the SignatureCanvas <canvas> only mounts when contract is unsigned — could not verify drawing flow because ct_05 was already signed via API.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Dashboard.jsx", "issue": "Missing 'Ejecutar recordatorios' button in JSX. runAutoReminders function and Send icon import exist but nothing renders the button. Admins cannot trigger auto reminders from the UI.", "selector": "button:text('Ejecutar recordatorios')", "priority": "HIGH"},
+      {"component": "Dashboard.jsx (FIXED by tester)", "issue": "SyntaxError: file had 14 duplicated/dangling lines after the closing function brace (lines 134-147). The whole frontend failed to compile (red error overlay) and every page was blocked. Test agent removed the duplicate block to unblock testing.", "selector": "n/a", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Audit page UI display", "issue": "Raw action codes (contract.sign, reminder.send_manual, arco.update) were not found verbatim on /audit page text after generating these events via API. The page likely renders translated/formatted labels — needs visual verification by E1 that all action types are displayed and labelled correctly. API itself returns logs correctly (verified in pytest).", "affected_selectors": ["/audit"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration2.py", "/app/backend/tests/test_revant_api.py", "/app/test_reports/pytest/iter2.xml"],
+  "action_items": [
+    "ADD the missing 'Ejecutar recordatorios' button to Dashboard.jsx that calls runAutoReminders() (admin-only). Suggested placement: in the greeting header right side next to the 'cobrados' badge, gated by user?.role === 'admin'. Use Send icon already imported.",
+    "INVESTIGATE root cause of corrupted Dashboard.jsx tail (duplicate block) to ensure other pages (Sidebar, RentRoll) don't have similar leftover edits.",
+    "VERIFY /audit page actually renders entries (admin can self-test by clicking sign/PDF/remind then visiting /audit and confirming row is shown).",
+    "Manual test the SignatureCanvas drawing flow on an UNSIGNED contract (after fresh DB reset) — programmatic mouse drawing on canvas was skipped per playbook guidance."
+  ],
+  "critical_code_review_comments": [
+    "backend/.env CORS_ORIGINS='*' combined with allow_credentials=True is rejected by browsers per CORS spec; works now only because cookies are also sent via testing same-origin or because backend echoes specific origin via reverse proxy. Should be set to explicit origins for production.",
+    "server.py:177 — get_current_user reads users with `_id`:0 projection which is correct; good.",
+    "server.py:298 — ensure_demo_data() is called inside hot endpoints (list_properties/list_contracts/kpis); fine due to count check but could be moved to startup.",
+    "server.py:493 — ARCO POST email failure is swallowed silently (just logged). Acceptable for demo since email is simulated, but worth surfacing to caller in prod.",
+    "Dashboard.jsx had a corrupted tail proving lack of editor lint/format step; recommend adding pre-commit eslint."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration2.py (new, 22 pytest cases)",
+    "/app/frontend/src/pages/Dashboard.jsx (removed 14 duplicated trailing lines that caused SyntaxError blocking entire frontend compile)"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "~85% (login flows, sidebar RBAC, ARCO public+admin, rent-roll reminder icons, contract modal w/ Download PDF, /audit+/arco pages all OK; missing run-reminders button is HIGH bug; canvas drawing not exercised)"},
+  "test_credentials": "admin@revant.mx / Revant2026! (admin), jorge.tenant@revant.mx / Inquilino2026! (inquilino) — both auto-seeded on backend startup with bcrypt $2b$ hashes.",
+  "seed_data_creation": "Created multiple ARCO requests with prefix TEST_/test_ during pytest and UI runs (folios arco_*). Audit log accumulated entries for sign/pdf/remind/arco.update during the test sweep.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend 22/22 green via /app/backend/tests/test_iteration2.py. To rerun: REACT_APP_BACKEND_URL=https://property-admin-89.preview.emergentagent.com pytest backend/tests/test_iteration2.py -v. The seeded admin/tenant credentials are in /app/memory/test_credentials.md. SignatureCanvas drawing is hard via Playwright — if you need to simulate, use page.mouse.move/down/up over the <canvas> element and ensure the contract is unsigned first (reset firmado=False in DB). Dashboard SyntaxError was fixed by removing dangling lines 134-147; if you find similar issues elsewhere, check git diff of the iteration 2 changes. Mocked: Gmail send_email returns {simulated:true, reason:'missing_credentials'} when GMAIL_USER/GMAIL_APP_PASSWORD are absent — backend tests assert simulated:true behavior, not real email send.",
+  "rca of the issue": "Dashboard.jsx — E1 left a dangling, partially-edited block of JSX (lines 134-147) after the function's closing brace, producing a top-level `className=...` token outside any function. Babel parser raised `SyntaxError: Unexpected token (134:11)`, the dev server displayed the red 'Compiled with problems' overlay, and every route was unrenderable. Mitigation: removed the duplicated block. Permanent fix: E1 should run a lint/format step on edited files. Additionally, the 'Ejecutar recordatorios' admin button was never rendered — the Send import (line 2) and runAutoReminders function (line 28) exist but no JSX calls them. E1 likely intended to add the button but the JSX block was lost in the same botched edit."
+}

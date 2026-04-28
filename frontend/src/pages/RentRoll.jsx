@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Send } from "lucide-react";
 import { api, fmtMXN, fmtDate, daysUntil } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import StatusBadge from "../components/StatusBadge";
@@ -9,6 +9,7 @@ import {
 } from "../components/ui/select";
 import { Button } from "../components/ui/button";
 import ContractViewer from "../components/ContractViewer";
+import { toast } from "sonner";
 
 export default function RentRoll() {
   const { user } = useAuth();
@@ -41,6 +42,19 @@ export default function RentRoll() {
   const updateStatus = async (id, estatus) => {
     await api.patch(`/contracts/${id}/status`, { estatus });
     load();
+  };
+
+  const sendReminder = async (id) => {
+    try {
+      const { data } = await api.post(`/contracts/${id}/remind`);
+      if (data.simulated) {
+        toast.success("Recordatorio simulado (configura GMAIL_USER + GMAIL_APP_PASSWORD para enviar real)");
+      } else {
+        toast.success(`Recordatorio enviado a ${data.to}`);
+      }
+    } catch {
+      toast.error("Error al enviar recordatorio");
+    }
   };
 
   return (
@@ -126,14 +140,27 @@ export default function RentRoll() {
                       ) : <StatusBadge status={c.estatus} />}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button
-                        data-testid={`view-${c.contract_id}`}
-                        onClick={() => setSelected(c)}
-                        variant="ghost"
-                        className="h-9 hover:bg-[#031433] hover:text-white text-[#031433] transition-all duration-200"
-                      >
-                        <Eye className="w-4 h-4 mr-1.5" /> Ver
-                      </Button>
+                      <div className="inline-flex items-center gap-1">
+                        {user?.role === "admin" && (
+                          <Button
+                            data-testid={`remind-${c.contract_id}`}
+                            onClick={() => sendReminder(c.contract_id)}
+                            variant="ghost" size="sm"
+                            title="Enviar recordatorio por email"
+                            className="h-9 hover:bg-[#D3A154] hover:text-[#031433] text-[#031433] transition-all duration-200"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          data-testid={`view-${c.contract_id}`}
+                          onClick={() => setSelected(c)}
+                          variant="ghost"
+                          className="h-9 hover:bg-[#031433] hover:text-white text-[#031433] transition-all duration-200"
+                        >
+                          <Eye className="w-4 h-4 mr-1.5" /> Ver
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );

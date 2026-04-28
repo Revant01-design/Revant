@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, Building2, CalendarClock, AlertTriangle, ArrowUpRight } from "lucide-react";
+import { TrendingUp, Building2, CalendarClock, AlertTriangle, ArrowUpRight, Send } from "lucide-react";
 import { api, fmtMXN, fmtDate, daysUntil } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import KpiCard from "../components/KpiCard";
 import StatusBadge from "../components/StatusBadge";
+import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -22,6 +24,17 @@ export default function Dashboard() {
     .filter(c => daysUntil(c.fecha_vencimiento) >= 0 && daysUntil(c.fecha_vencimiento) <= 60)
     .sort((a, b) => daysUntil(a.fecha_vencimiento) - daysUntil(b.fecha_vencimiento))
     .slice(0, 5);
+
+  const runAutoReminders = async () => {
+    try {
+      const { data } = await api.post("/notifications/run-auto-reminders");
+      const realCount = data.items.filter(i => !i.simulated).length;
+      const simCount = data.items.filter(i => i.simulated).length;
+      if (realCount > 0) toast.success(`${realCount} recordatorio(s) enviados`);
+      if (simCount > 0) toast.info(`${simCount} simulados (sin credenciales Gmail)`);
+      if (data.processed === 0) toast.info("Sin vencimientos en los próximos 7 días");
+    } catch { toast.error("Error al ejecutar recordatorios"); }
+  };
 
   return (
     <div className="space-y-8" data-testid="dashboard-page">

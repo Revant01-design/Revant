@@ -1,15 +1,33 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import io
 import logging
 import uuid
 import httpx
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
+
+import bcrypt
+
+from email_service import send_email, render_reminder_html, render_arco_received_html
+from pdf_service import generate_contract_pdf
+from audit import log_audit
+
+
+def hash_password(pw: str) -> str:
+    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(pw: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(pw.encode(), hashed.encode())
+    except Exception:
+        return False
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -54,6 +72,48 @@ class Contract(BaseModel):
     estatus: Literal["pagado", "pendiente", "atrasado"]
     firmado: bool = False
     firmado_at: Optional[str] = None
+    signature_image: Optional[str] = None
+
+class SignPayload(BaseModel):
+    signature_image: Optional[str] = None  # base64 data URL
+
+class ArcoRequest(BaseModel):
+    request_id: str
+    tipo: Literal["acceso", "rectificacion", "cancelacion", "oposicion"]
+    nombre_completo: str
+    email: EmailStr
+    telefono: Optional[str] = None
+    identificacion_tipo: str
+    identificacion_numero: str
+    descripcion: str
+    estatus: Literal["pendiente", "en_proceso", "resuelto", "rechazado"] = "pendiente"
+    notas_resolucion: Optional[str] = None
+    created_at: str
+    resolved_at: Optional[str] = None
+
+class ArcoCreate(BaseModel):
+    tipo: Literal["acceso", "rectificacion", "cancelacion", "oposicion"]
+    nombre_completo: str
+    email: EmailStr
+    telefono: Optional[str] = None
+    identificacion_tipo: str
+    identificacion_numero: str
+    descripcion: str
+
+class ArcoUpdate(BaseModel):
+    estatus: Literal["pendiente", "en_proceso", "resuelto", "rechazado"]
+    notas_resolucion: Optional[str] = None
+
+class AuditLogModel(BaseModel):
+    log_id: str
+    user_id: Optional[str] = None
+    user_email: Optional[str] = None
+    user_role: Optional[str] = None
+    action: str
+    target_type: str = ""
+    target_id: str = ""
+    details: dict = {}
+    created_at: str
 
 # ------------- Auth -------------
 DEMO_TENANT_EMAILS = [
@@ -63,6 +123,35 @@ DEMO_TENANT_EMAILS = [
     "ana.tenant@revant.mx",
     "luis.tenant@revant.mx",
 ]
+
+
+def _set_session_cookie(response: Response, token: str):
+    response.set_cookie(
+        key="session_token", value=token,
+        httponly=True, secure=True, samesite="none",
+        max_age=7 * 24 * 3600, path="/",
+    )
+
+async def _create_session_token(user_id: str) -> str:
+    token = uuid.uuid4().hex + uuid.uuid4().hex
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": token,
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return token
+
+
+class RegisterPayload(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6)
+    name: str = Field(min_length=2)
+
+class LoginPayload(BaseModel):
+    email: EmailStr
+    password: str
 
 async def get_current_user(request: Request) -> User:
     token = request.cookies.get("session_token")
@@ -150,6 +239,42 @@ async def create_session(request: Request, response: Response):
     await ensure_demo_data()
     return {"user": User(**user_doc).model_dump(), "session_token": token}
 
+@api_router.post("/auth/register")
+async def auth_register(payload: RegisterPayload, response: Response):
+    email = payload.email.lower()
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail="Este correo ya está registrado")
+    role = "inquilino" if email in DEMO_TENANT_EMAILS else "admin"
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    await db.users.insert_one({
+        "user_id": user_id,
+        "email": email,
+        "name": payload.name,
+        "picture": None,
+        "role": role,
+        "password_hash": hash_password(payload.password),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    token = await _create_session_token(user_id)
+    _set_session_cookie(response, token)
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    await ensure_demo_data()
+    return {"user": User(**user_doc).model_dump(), "session_token": token}
+
+@api_router.post("/auth/login")
+async def auth_login(payload: LoginPayload, response: Response):
+    email = payload.email.lower()
+    user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user_doc or not user_doc.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
+    if not verify_password(payload.password, user_doc["password_hash"]):
+        raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
+    token = await _create_session_token(user_doc["user_id"])
+    _set_session_cookie(response, token)
+    user_doc.pop("password_hash", None)
+    return {"user": User(**user_doc).model_dump(), "session_token": token}
+
 @api_router.get("/auth/me", response_model=User)
 async def me(user: User = Depends(get_current_user)):
     return user
@@ -227,19 +352,74 @@ async def get_contract(contract_id: str, user: User = Depends(get_current_user))
     return Contract(**doc)
 
 @api_router.post("/contracts/{contract_id}/sign", response_model=Contract)
-async def sign_contract(contract_id: str, user: User = Depends(get_current_user)):
+async def sign_contract(contract_id: str, payload: SignPayload | None = None, user: User = Depends(get_current_user)):
     doc = await db.contracts.find_one({"contract_id": contract_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Contrato no encontrado")
     if user.role == "inquilino" and doc["inquilino_email"] != user.email:
         raise HTTPException(status_code=403, detail="Sin acceso")
     now_iso = datetime.now(timezone.utc).date().isoformat()
-    await db.contracts.update_one(
-        {"contract_id": contract_id},
-        {"$set": {"firmado": True, "firmado_at": now_iso}},
-    )
+    update = {"firmado": True, "firmado_at": now_iso}
+    if payload and payload.signature_image:
+        update["signature_image"] = payload.signature_image
+    await db.contracts.update_one({"contract_id": contract_id}, {"$set": update})
     updated = await db.contracts.find_one({"contract_id": contract_id}, {"_id": 0})
+    await log_audit(db, user=user, action="contract.sign", target_type="contract", target_id=contract_id,
+                    details={"with_signature_image": bool(payload and payload.signature_image)})
     return Contract(**updated)
+
+@api_router.get("/contracts/{contract_id}/pdf")
+async def contract_pdf(contract_id: str, user: User = Depends(get_current_user)):
+    doc = await db.contracts.find_one({"contract_id": contract_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Contrato no encontrado")
+    if user.role == "inquilino" and doc["inquilino_email"] != user.email:
+        raise HTTPException(status_code=403, detail="Sin acceso")
+    pdf_bytes = generate_contract_pdf(doc)
+    await log_audit(db, user=user, action="contract.download_pdf", target_type="contract", target_id=contract_id)
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="contrato_{contract_id}.pdf"'},
+    )
+
+@api_router.post("/contracts/{contract_id}/remind")
+async def send_reminder(contract_id: str, user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    doc = await db.contracts.find_one({"contract_id": contract_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Contrato no encontrado")
+    fv = datetime.fromisoformat(doc["fecha_vencimiento"]).date()
+    days = (fv - datetime.now(timezone.utc).date()).days
+    monto_str = f"${doc['monto_renta']:,.0f} MXN"
+    fecha_str = fv.strftime("%d/%m/%Y")
+    html = render_reminder_html(doc["inquilino_nombre"], doc["propiedad_nombre"], monto_str, fecha_str, days)
+    res = await send_email(doc["inquilino_email"], f"Recordatorio: renta {doc['propiedad_nombre']}", html)
+    await log_audit(db, user=user, action="reminder.send_manual", target_type="contract", target_id=contract_id,
+                    details={"to": doc["inquilino_email"], "result": res})
+    return {"contract_id": contract_id, "to": doc["inquilino_email"], **res}
+
+@api_router.post("/notifications/run-auto-reminders")
+async def run_auto_reminders(user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    today = datetime.now(timezone.utc).date()
+    contracts = await db.contracts.find({}, {"_id": 0}).to_list(500)
+    sent = []
+    for c in contracts:
+        try:
+            fv = datetime.fromisoformat(c["fecha_vencimiento"]).date()
+        except Exception:
+            continue
+        days = (fv - today).days
+        if c["estatus"] != "pagado" and -7 <= days <= 7:
+            monto_str = f"${c['monto_renta']:,.0f} MXN"
+            html = render_reminder_html(c["inquilino_nombre"], c["propiedad_nombre"], monto_str, fv.strftime("%d/%m/%Y"), days)
+            res = await send_email(c["inquilino_email"], f"Recordatorio: renta {c['propiedad_nombre']}", html)
+            sent.append({"contract_id": c["contract_id"], "to": c["inquilino_email"], **res})
+    await log_audit(db, user=user, action="reminder.run_auto", details={"count": len(sent)})
+    return {"processed": len(sent), "items": sent}
 
 class StatusUpdate(BaseModel):
     estatus: Literal["pagado", "pendiente", "atrasado"]
@@ -293,6 +473,58 @@ async def kpis(user: User = Depends(get_current_user)):
         "total_contratos": len(contracts),
     }
 
+# ------------- ARCO (LFPDPPP) -------------
+@api_router.post("/arco", response_model=ArcoRequest)
+async def create_arco(payload: ArcoCreate):
+    """Public endpoint - titulares de datos can submit ARCO requests without auth."""
+    doc = {
+        "request_id": f"arco_{uuid.uuid4().hex[:10]}",
+        **payload.model_dump(),
+        "estatus": "pendiente",
+        "notas_resolucion": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "resolved_at": None,
+    }
+    await db.arco_requests.insert_one(dict(doc))
+    try:
+        html = render_arco_received_html(payload.nombre_completo, doc["request_id"], payload.tipo.capitalize())
+        await send_email(payload.email, f"Solicitud ARCO recibida — {doc['request_id']}", html)
+    except Exception as e:
+        logger.warning("ARCO email fail: %s", e)
+    return ArcoRequest(**doc)
+
+@api_router.get("/arco", response_model=List[ArcoRequest])
+async def list_arco(user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    docs = await db.arco_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return [ArcoRequest(**d) for d in docs]
+
+@api_router.patch("/arco/{request_id}", response_model=ArcoRequest)
+async def update_arco(request_id: str, payload: ArcoUpdate, user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    update = {"estatus": payload.estatus}
+    if payload.notas_resolucion is not None:
+        update["notas_resolucion"] = payload.notas_resolucion
+    if payload.estatus in ("resuelto", "rechazado"):
+        update["resolved_at"] = datetime.now(timezone.utc).isoformat()
+    res = await db.arco_requests.update_one({"request_id": request_id}, {"$set": update})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    updated = await db.arco_requests.find_one({"request_id": request_id}, {"_id": 0})
+    await log_audit(db, user=user, action="arco.update", target_type="arco", target_id=request_id,
+                    details={"estatus": payload.estatus})
+    return ArcoRequest(**updated)
+
+# ------------- Audit Log -------------
+@api_router.get("/audit", response_model=List[AuditLogModel])
+async def get_audit_log(limit: int = 200, user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    docs = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return [AuditLogModel(**d) for d in docs]
+
 @api_router.get("/")
 async def root():
     return {"app": "Revant API", "status": "ok"}
@@ -309,6 +541,34 @@ app.add_middleware(
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def _seed_users_and_indexes():
+    try:
+        await db.users.create_index("email", unique=True)
+    except Exception:
+        pass
+    # Seed demo admin + tenant accounts (email/password)
+    seed = [
+        {"email": "admin@revant.mx", "name": "Admin Demo", "password": "Revant2026!", "role": "admin"},
+        {"email": "jorge.tenant@revant.mx", "name": "Jorge Hernández", "password": "Inquilino2026!", "role": "inquilino"},
+    ]
+    for s in seed:
+        existing = await db.users.find_one({"email": s["email"]}, {"_id": 0})
+        if not existing:
+            await db.users.insert_one({
+                "user_id": f"user_{uuid.uuid4().hex[:12]}",
+                "email": s["email"],
+                "name": s["name"],
+                "picture": None,
+                "role": s["role"],
+                "password_hash": hash_password(s["password"]),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        elif not existing.get("password_hash"):
+            await db.users.update_one({"email": s["email"]}, {"$set": {"password_hash": hash_password(s["password"])}})
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

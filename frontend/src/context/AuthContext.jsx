@@ -19,7 +19,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // CRITICAL: skip /me check if returning from OAuth callback
     if (window.location.hash?.includes("session_id=")) {
       setLoading(false);
       return;
@@ -38,8 +37,20 @@ export function AuthProvider({ children }) {
     setUser(data);
   };
 
+  const loginPassword = async (email, password) => {
+    const { data } = await api.post("/auth/login", { email, password });
+    setUser(data.user);
+    return data.user;
+  };
+
+  const registerPassword = async (email, password, name) => {
+    const { data } = await api.post("/auth/register", { email, password, name });
+    setUser(data.user);
+    return data.user;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, logout, switchRole, refresh: checkAuth }}>
+    <AuthContext.Provider value={{ user, setUser, loading, logout, switchRole, refresh: checkAuth, loginPassword, registerPassword }}>
       {children}
     </AuthContext.Provider>
   );
