@@ -149,9 +149,9 @@ export default function RentRoll() {
 
       {/* Bulk action bar */}
       {user?.role === "admin" && picked.size > 0 && (
-        <div className="bg-[#031433] text-white rounded-md px-5 py-3 flex items-center justify-between flex-wrap gap-3 shadow-md" data-testid="bulk-bar">
+        <div className="bg-[#0A1A2F] text-white rounded-md px-5 py-3 flex items-center justify-between flex-wrap gap-3 shadow-md" data-testid="bulk-bar">
           <p className="text-sm font-medium">
-            <span className="font-bold text-[#D3A154]">{picked.size}</span> contrato{picked.size !== 1 ? "s" : ""} seleccionado{picked.size !== 1 ? "s" : ""}
+            <span className="font-bold text-[#C9B37E]">{picked.size}</span> contrato{picked.size !== 1 ? "s" : ""} seleccionado{picked.size !== 1 ? "s" : ""}
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <DropdownMenu>
@@ -171,7 +171,7 @@ export default function RentRoll() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button data-testid="bulk-cobranza" size="sm"
-                        className="h-9 bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90">
+                        className="h-9 bg-[#C9B37E] text-[#0A1A2F] hover:bg-[#C9B37E]/90">
                   Cobranza masiva
                 </Button>
               </DropdownMenuTrigger>
@@ -211,9 +211,9 @@ export default function RentRoll() {
               <tr className="text-left">
                 {user?.role === "admin" && (
                   <Th className="w-10">
-                    <button onClick={toggleAll} data-testid="select-all" className="text-slate-500 hover:text-[#031433]">
+                    <button onClick={toggleAll} data-testid="select-all" className="text-slate-500 hover:text-[#0A1A2F]">
                       {picked.size === filtered.length && filtered.length > 0
-                        ? <CheckSquare className="w-4 h-4 text-[#D3A154]" />
+                        ? <CheckSquare className="w-4 h-4 text-[#C9B37E]" />
                         : <Square className="w-4 h-4" />}
                     </button>
                   </Th>
@@ -234,24 +234,24 @@ export default function RentRoll() {
                 const d = daysUntil(c.fecha_vencimiento);
                 const isPicked = picked.has(c.contract_id);
                 return (
-                  <tr key={c.contract_id} className={`border-b border-slate-100 transition-colors ${isPicked ? "bg-[#D3A154]/5" : "hover:bg-slate-50"}`} data-testid={`row-${c.contract_id}`}>
+                  <tr key={c.contract_id} className={`border-b border-slate-100 transition-colors ${isPicked ? "bg-[#C9B37E]/5" : "hover:bg-slate-50"}`} data-testid={`row-${c.contract_id}`}>
                     {user?.role === "admin" && (
                       <td className="px-6 py-4">
-                        <button onClick={() => togglePick(c.contract_id)} data-testid={`pick-${c.contract_id}`} className="text-slate-500 hover:text-[#031433]">
+                        <button onClick={() => togglePick(c.contract_id)} data-testid={`pick-${c.contract_id}`} className="text-slate-500 hover:text-[#0A1A2F]">
                           {isPicked
-                            ? <CheckSquare className="w-4 h-4 text-[#D3A154]" />
+                            ? <CheckSquare className="w-4 h-4 text-[#C9B37E]" />
                             : <Square className="w-4 h-4" />}
                         </button>
                       </td>
                     )}
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-[#031433]">{c.inquilino_nombre}</p>
+                      <p className="font-semibold text-[#0A1A2F]">{c.inquilino_nombre}</p>
                       <p className="text-xs text-slate-500">{c.inquilino_email}</p>
                     </td>
-                    <td className="px-6 py-4 text-[#031433]">{c.propiedad_nombre}</td>
-                    <td className="px-6 py-4 font-semibold text-[#031433]">{fmtMXN(c.monto_renta)}</td>
+                    <td className="px-6 py-4 text-[#0A1A2F]">{c.propiedad_nombre}</td>
+                    <td className="px-6 py-4 font-semibold text-[#0A1A2F]">{fmtMXN(c.monto_renta)}</td>
                     <td className="px-6 py-4">
-                      <p className="text-[#031433]">{fmtDate(c.fecha_vencimiento)}</p>
+                      <p className="text-[#0A1A2F]">{fmtDate(c.fecha_vencimiento)}</p>
                       <p className={`text-xs ${d <= 7 ? "text-red-600" : d <= 30 ? "text-amber-700" : "text-slate-500"}`}>
                         {d < 0 ? `Vencido hace ${Math.abs(d)}d` : d === 0 ? "Vence hoy" : `${d}d restantes`}
                       </p>
@@ -279,7 +279,7 @@ export default function RentRoll() {
                                 data-testid={`pay-${c.contract_id}`}
                                 variant="ghost" size="sm"
                                 title="Cobranza"
-                                className="h-9 hover:bg-[#D3A154] hover:text-[#031433] text-[#031433] transition-all duration-200"
+                                className="h-9 hover:bg-[#C9B37E] hover:text-[#0A1A2F] text-[#0A1A2F] transition-all duration-200"
                               >
                                 <CreditCard className="w-4 h-4" />
                               </Button>
@@ -304,7 +304,7 @@ export default function RentRoll() {
                           data-testid={`view-${c.contract_id}`}
                           onClick={() => setSelected(c)}
                           variant="ghost"
-                          className="h-9 hover:bg-[#031433] hover:text-white text-[#031433] transition-all duration-200"
+                          className="h-9 hover:bg-[#0A1A2F] hover:text-white text-[#0A1A2F] transition-all duration-200"
                         >
                           <Eye className="w-4 h-4 mr-1.5" /> Ver
                         </Button>
@@ -338,9 +338,9 @@ function Th({ children, className = "" }) {
 
 function Box({ label, value, accent }) {
   return (
-    <div className={`p-5 rounded-md border ${accent ? "bg-[#031433] border-[#031433] text-white" : "bg-white border-slate-200"}`}>
-      <p className={`text-[10px] uppercase tracking-[0.18em] font-semibold ${accent ? "text-[#D3A154]" : "text-slate-500"}`}>{label}</p>
-      <p className={`mt-2 font-display text-2xl font-bold tracking-tight ${accent ? "text-white" : "text-[#031433]"}`}>{value}</p>
+    <div className={`p-5 rounded-md border ${accent ? "bg-[#0A1A2F] border-[#0A1A2F] text-white" : "bg-white border-slate-200"}`}>
+      <p className={`text-[10px] uppercase tracking-[0.18em] font-semibold ${accent ? "text-[#C9B37E]" : "text-slate-500"}`}>{label}</p>
+      <p className={`mt-2 font-display text-2xl font-bold tracking-tight ${accent ? "text-white" : "text-[#0A1A2F]"}`}>{value}</p>
     </div>
   );
 }

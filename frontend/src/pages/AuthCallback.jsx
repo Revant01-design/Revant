@@ -34,8 +34,8 @@ export default function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="text-center" data-testid="auth-callback-loading">
-        <div className="w-12 h-12 border-2 border-[#031433] border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="mt-4 text-[#031433] font-medium">Iniciando sesión…</p>
+        <div className="w-12 h-12 border-2 border-[#0A1A2F] border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="mt-4 text-[#0A1A2F] font-medium">Iniciando sesión…</p>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import { api, fmtMXN } from "../lib/api";
 
-const COLORS = { pagado: "#10B981", pendiente: "#D3A154", atrasado: "#DC2626" };
+const COLORS = { pagado: "#10B981", pendiente: "#C9B37E", atrasado: "#DC2626" };
 
 export default function DashboardCharts() {
   const [data, setData] = useState(null);
@@ -29,8 +29,8 @@ export default function DashboardCharts() {
                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
             <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
                      formatter={(v) => fmtMXN(v)} />
-            <Line type="monotone" dataKey="ingresos" stroke="#031433" strokeWidth={2.5}
-                  dot={{ fill: "#D3A154", r: 4 }} activeDot={{ r: 6, fill: "#D3A154" }} />
+            <Line type="monotone" dataKey="ingresos" stroke="#0A1A2F" strokeWidth={2.5}
+                  dot={{ fill: "#C9B37E", r: 4 }} activeDot={{ r: 6, fill: "#C9B37E" }} />
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -61,7 +61,7 @@ export default function DashboardCharts() {
                      formatter={(v) => fmtMXN(v)} />
             <Bar dataKey="monto" radius={[4, 4, 0, 0]}>
               {data.by_property.map((p, i) => (
-                <Cell key={i} fill={p.ocupada ? "#031433" : "#cbd5e1"} />
+                <Cell key={i} fill={p.ocupada ? "#0A1A2F" : "#cbd5e1"} />
               ))}
             </Bar>
           </BarChart>
@@ -76,7 +76,7 @@ function ChartCard({ title, subtitle, children, className = "" }) {
     <div className={`bg-white border border-slate-200 rounded-md p-5 ${className}`}>
       <div className="mb-4">
         <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold">{subtitle}</p>
-        <h3 className="font-display text-lg font-bold tracking-tight text-[#031433] mt-0.5">{title}</h3>
+        <h3 className="font-display text-lg font-bold tracking-tight text-[#0A1A2F] mt-0.5">{title}</h3>
       </div>
       {children}
     </div>

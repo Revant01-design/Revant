@@ -25,14 +25,14 @@ export default function Properties() {
                 {p.ocupada ? "Ocupada" : "Disponible"}
               </span>
             </div>
-            <h3 className="font-display text-lg font-bold tracking-tight text-[#031433]">{p.nombre}</h3>
+            <h3 className="font-display text-lg font-bold tracking-tight text-[#0A1A2F]">{p.nombre}</h3>
             <p className="mt-1 text-sm text-slate-500 inline-flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5" /> {p.direccion}, {p.ciudad}
             </p>
             <div className="mt-4 pt-4 border-t border-slate-100 flex items-end justify-between">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-500">Renta mensual</p>
-                <p className="font-display text-xl font-bold text-[#031433]">{fmtMXN(p.monto_renta)}</p>
+                <p className="font-display text-xl font-bold text-[#0A1A2F]">{fmtMXN(p.monto_renta)}</p>
               </div>
             </div>
           </div>

@@ -1,18 +1,25 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Building2, ShieldCheck, TrendingUp, FileSignature, Mail, Lock, User as UserIcon } from "lucide-react";
+import { ShieldCheck, TrendingUp, FileSignature, Mail, Lock, User as UserIcon, Building2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
+import Logo from "../components/Logo";
 
+// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 export default function Login() {
   const navigate = useNavigate();
   const { loginPassword, registerPassword } = useAuth();
   const [tab, setTab] = useState("login");
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", name: "" });
+
+  const handleGoogle = () => {
+    // Static MVP — Google OAuth not available in mock mode
+    toast.error("Google OAuth no disponible en versión demo. Usa una cuenta demo abajo.");
+  };
 
   const formatErr = (d) => {
     if (!d) return "Algo salió mal. Intenta de nuevo.";
@@ -45,20 +52,15 @@ export default function Login() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-white">
-      <div className="relative hidden lg:flex flex-col justify-between p-12 text-white" style={{ background: "#031433" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ background: "#D3A154" }}>
-            <Building2 className="w-5 h-5 text-[#031433]" />
-          </div>
-          <span className="font-display text-2xl font-bold tracking-tight">REVANT</span>
-        </div>
+      <div className="relative hidden lg:flex flex-col justify-between p-12 text-white" style={{ background: "#0A1A2F" }}>
+        <Logo variant="dark" size="md" />
 
         <div className="space-y-8">
           <div>
-            <p className="uppercase tracking-[0.2em] text-xs text-[#D3A154] mb-4">PropTech · FinTech</p>
+            <p className="uppercase tracking-[0.2em] text-xs text-[#C9B37E] mb-4">PropTech · FinTech</p>
             <h1 className="font-display text-5xl xl:text-6xl font-bold leading-[1.05]">
               Operación inmobiliaria<br />
-              <span style={{ color: "#D3A154" }}>institucional.</span>
+              <span style={{ color: "#C9B37E" }}>institucional.</span>
             </h1>
             <p className="mt-6 text-white/70 text-lg max-w-md">
               Una sola plataforma para administrar rentas, contratos y métricas financieras de tu portafolio.
@@ -73,28 +75,25 @@ export default function Login() {
               { icon: Building2, label: "Multi-propiedad" },
             ].map((f, i) => (
               <div key={i} className="flex items-center gap-3 p-3 border border-white/10 rounded-md">
-                <f.icon className="w-4 h-4" style={{ color: "#D3A154" }} />
+                <f.icon className="w-4 h-4" style={{ color: "#C9B37E" }} />
                 <span className="text-sm text-white/85">{f.label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="text-xs text-white/40">© {new Date().getFullYear()} Revant · Demo MVP — datos simulados localmente</p>
+        <p className="text-xs text-white/40">© {new Date().getFullYear()} Revant · LFPDPPP compliant</p>
       </div>
 
       <div className="flex items-center justify-center p-6 lg:p-10">
         <div className="w-full max-w-md space-y-6">
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-md flex items-center justify-center" style={{ background: "#031433" }}>
-              <Building2 className="w-5 h-5" style={{ color: "#D3A154" }} />
-            </div>
-            <span className="font-display text-2xl font-bold tracking-tight text-[#031433]">REVANT</span>
+          <div className="lg:hidden mb-8">
+            <Logo variant="light" size="md" />
           </div>
 
           <div>
-            <p className="uppercase tracking-[0.18em] text-xs text-[#D3A154] font-semibold mb-3">Acceso seguro</p>
-            <h2 className="font-display text-3xl lg:text-4xl font-bold tracking-tight text-[#031433]">
+            <p className="uppercase tracking-[0.18em] text-xs text-[#C9B37E] font-semibold mb-3">Acceso seguro</p>
+            <h2 className="font-display text-3xl lg:text-4xl font-bold tracking-tight text-[#0A1A2F]">
               {tab === "login" ? "Bienvenido de vuelta" : "Crea tu cuenta"}
             </h2>
           </div>
@@ -114,12 +113,12 @@ export default function Login() {
                   <Input type="password" required value={form.password} onChange={set("password")} className="h-11 pl-10" placeholder="••••••••" data-testid="login-password" />
                 </FieldGroup>
                 <div className="flex justify-end">
-                  <Link to="/forgot-password" className="text-xs text-slate-500 hover:text-[#031433] font-medium underline decoration-[#D3A154] underline-offset-4">
+                  <Link to="/forgot-password" className="text-xs text-slate-500 hover:text-[#0A1A2F] font-medium underline decoration-[#C9B37E] underline-offset-4" data-testid="forgot-link">
                     ¿Olvidaste tu contraseña?
                   </Link>
                 </div>
                 <Button type="submit" disabled={loading} data-testid="login-submit"
-                        className="w-full h-12 bg-[#031433] text-white hover:bg-[#031433]/90 transition-all duration-200">
+                        className="w-full h-12 bg-[#0A1A2F] text-white hover:bg-[#0A1A2F]/90 transition-all duration-200">
                   {loading ? "Ingresando…" : "Ingresar"}
                 </Button>
               </form>
@@ -137,24 +136,24 @@ export default function Login() {
                   <Input type="password" required minLength={6} value={form.password} onChange={set("password")} className="h-11 pl-10" placeholder="••••••••" data-testid="register-password" />
                 </FieldGroup>
                 <Button type="submit" disabled={loading} data-testid="register-submit"
-                        className="w-full h-12 bg-[#031433] text-white hover:bg-[#031433]/90 transition-all duration-200">
+                        className="w-full h-12 bg-[#0A1A2F] text-white hover:bg-[#0A1A2F]/90 transition-all duration-200">
                   {loading ? "Creando…" : "Crear cuenta"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
 
-          {/* Demo accounts quick access */}
+          {/* Demo accounts quick access (static MVP only) */}
           <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
             <p className="text-[10px] uppercase tracking-[0.18em] text-amber-700 font-semibold mb-2">Modo demo · Datos locales</p>
             <p className="text-xs text-slate-600 mb-3">Cuentas precargadas para probar:</p>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => fillDemo("admin")} type="button" className="text-left p-2 rounded bg-white border border-amber-200 hover:border-[#D3A154] transition-colors" data-testid="demo-admin">
-                <p className="text-xs font-bold text-[#031433]">Admin</p>
+              <button onClick={() => fillDemo("admin")} type="button" className="text-left p-2 rounded bg-white border border-amber-200 hover:border-[#C9B37E] transition-colors" data-testid="demo-admin">
+                <p className="text-xs font-bold text-[#0A1A2F]">Admin</p>
                 <p className="text-[10px] text-slate-500">admin@revant.mx</p>
               </button>
-              <button onClick={() => fillDemo("tenant")} type="button" className="text-left p-2 rounded bg-white border border-amber-200 hover:border-[#D3A154] transition-colors" data-testid="demo-tenant">
-                <p className="text-xs font-bold text-[#031433]">Inquilino</p>
+              <button onClick={() => fillDemo("tenant")} type="button" className="text-left p-2 rounded bg-white border border-amber-200 hover:border-[#C9B37E] transition-colors" data-testid="demo-tenant">
+                <p className="text-xs font-bold text-[#0A1A2F]">Inquilino</p>
                 <p className="text-[10px] text-slate-500">jorge.tenant@revant.mx</p>
               </button>
             </div>
@@ -162,7 +161,7 @@ export default function Login() {
 
           <p className="text-xs text-slate-400 text-center leading-relaxed">
             Para ejercer derechos ARCO,{" "}
-            <Link to="/arco-publico" className="text-[#D3A154] font-semibold underline">haz clic aquí</Link>.
+            <Link to="/arco-publico" className="text-[#C9B37E] font-semibold underline" data-testid="link-arco">haz clic aquí</Link>.
           </p>
         </div>
       </div>

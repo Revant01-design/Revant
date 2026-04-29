@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Building2, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { api } from "../lib/api";
+import Logo from "../components/Logo";
 
 export default function PaymentSuccess() {
   const [params] = useSearchParams();
@@ -31,19 +32,16 @@ export default function PaymentSuccess() {
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-slate-100">
-        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md flex items-center justify-center" style={{ background: "#031433" }}>
-            <Building2 className="w-5 h-5" style={{ color: "#D3A154" }} />
-          </div>
-          <span className="font-display text-xl font-bold tracking-tight text-[#031433]">REVANT</span>
+        <div className="max-w-3xl mx-auto px-6 py-5">
+          <Logo variant="light" size="sm" />
         </div>
       </header>
 
       <div className="max-w-xl mx-auto px-6 py-20 text-center" data-testid="payment-success-page">
         {status === "checking" && (
           <>
-            <Loader2 className="w-12 h-12 text-[#031433] animate-spin mx-auto" />
-            <h2 className="font-display text-3xl font-bold tracking-tight text-[#031433] mt-6">Verificando pago…</h2>
+            <Loader2 className="w-12 h-12 text-[#0A1A2F] animate-spin mx-auto" />
+            <h2 className="font-display text-3xl font-bold tracking-tight text-[#0A1A2F] mt-6">Verificando pago…</h2>
             <p className="text-slate-500 mt-3">Por favor no cierres esta ventana.</p>
           </>
         )}
@@ -52,13 +50,13 @@ export default function PaymentSuccess() {
             <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto" data-testid="payment-paid">
               <CheckCircle2 className="w-9 h-9 text-emerald-600" />
             </div>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-[#031433] mt-6">¡Pago recibido!</h2>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-[#0A1A2F] mt-6">¡Pago recibido!</h2>
             <p className="text-slate-500 mt-3">
               Confirmamos tu pago de <strong>${(data?.amount_total / 100).toLocaleString("es-MX")} {data?.currency?.toUpperCase()}</strong>.
               Tu contrato ha sido marcado como <strong>Pagado</strong>.
             </p>
             <p className="text-xs text-slate-400 mt-2 font-mono">{sessionId}</p>
-            <Link to="/dashboard" className="inline-block mt-8 px-6 h-12 leading-[48px] bg-[#031433] text-white rounded-md font-semibold hover:bg-[#031433]/90" data-testid="back-dashboard">
+            <Link to="/dashboard" className="inline-block mt-8 px-6 h-12 leading-[48px] bg-[#0A1A2F] text-white rounded-md font-semibold hover:bg-[#0A1A2F]/90" data-testid="back-dashboard">
               Volver al dashboard
             </Link>
           </>
@@ -68,9 +66,9 @@ export default function PaymentSuccess() {
             <div className="w-16 h-16 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mx-auto" data-testid="payment-failed">
               <XCircle className="w-9 h-9 text-red-600" />
             </div>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-[#031433] mt-6">No pudimos verificar el pago</h2>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-[#0A1A2F] mt-6">No pudimos verificar el pago</h2>
             <p className="text-slate-500 mt-3">Si crees que se cobró, contacta a soporte. Sesión: <span className="font-mono text-xs">{sessionId}</span></p>
-            <Link to="/dashboard" className="inline-block mt-8 px-6 h-12 leading-[48px] border border-slate-300 text-[#031433] rounded-md font-semibold hover:bg-slate-50">
+            <Link to="/dashboard" className="inline-block mt-8 px-6 h-12 leading-[48px] border border-slate-300 text-[#0A1A2F] rounded-md font-semibold hover:bg-slate-50">
               Volver al dashboard
             </Link>
           </>

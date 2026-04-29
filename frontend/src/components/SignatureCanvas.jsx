@@ -18,7 +18,7 @@ export default function SignatureCanvas({ value, onChange, disabled }) {
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#031433";
+    ctx.strokeStyle = "#0A1A2F";
   }, []);
 
   const pos = (e) => {
@@ -74,7 +74,7 @@ export default function SignatureCanvas({ value, onChange, disabled }) {
       <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
         <span>{empty ? "Dibuja tu firma con el mouse o el dedo" : "Firma capturada"}</span>
         <button type="button" onClick={clear} disabled={disabled || empty} data-testid="clear-signature"
-                className="inline-flex items-center gap-1 text-slate-600 hover:text-[#031433] disabled:opacity-40">
+                className="inline-flex items-center gap-1 text-slate-600 hover:text-[#0A1A2F] disabled:opacity-40">
           <Eraser className="w-3 h-3" /> Limpiar
         </button>
       </div>

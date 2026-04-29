@@ -29,9 +29,9 @@ export default function AuditLog() {
           {items.length === 0 && <p className="px-6 py-12 text-center text-slate-500">Sin actividad registrada.</p>}
           {items.map((l) => (
             <div key={l.log_id} className="px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors" data-testid={`audit-${l.log_id}`}>
-              <div className="w-2 h-2 rounded-full mt-2" style={{ background: "#D3A154" }} />
+              <div className="w-2 h-2 rounded-full mt-2" style={{ background: "#C9B37E" }} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#031433]">
+                <p className="text-sm font-semibold text-[#0A1A2F]">
                   {ACTION_LABEL[l.action] || l.action}
                   {l.target_id && <span className="text-slate-400 font-mono text-xs ml-2">{l.target_id}</span>}
                 </p>

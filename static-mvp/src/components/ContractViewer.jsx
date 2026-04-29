@@ -41,8 +41,8 @@ export default function ContractViewer({ contract, open, onOpenChange, onSigned 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="contract-viewer">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-display text-2xl tracking-tight text-[#031433]">
-            <FileText className="w-5 h-5 text-[#D3A154]" />
+          <DialogTitle className="flex items-center gap-2 font-display text-2xl tracking-tight text-[#0A1A2F]">
+            <FileText className="w-5 h-5 text-[#C9B37E]" />
             Contrato de Arrendamiento
           </DialogTitle>
           <DialogDescription className="text-xs uppercase tracking-wider text-slate-500">
@@ -50,7 +50,7 @@ export default function ContractViewer({ contract, open, onOpenChange, onSigned 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-slate-50 border border-slate-200 rounded-md p-6 space-y-4 text-sm leading-relaxed text-[#031433]">
+        <div className="bg-slate-50 border border-slate-200 rounded-md p-6 space-y-4 text-sm leading-relaxed text-[#0A1A2F]">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">Cláusulas principales</p>
           <p>
             En la Ciudad de México, en la fecha {fmtDate(contract.fecha_inicio)}, comparecen por una parte
@@ -88,7 +88,7 @@ export default function ContractViewer({ contract, open, onOpenChange, onSigned 
               {contract.signature_image ? (
                 <img src={contract.signature_image} alt="firma" className="mx-auto max-h-24" data-testid="signature-image" />
               ) : (
-                <p className="font-signature text-3xl text-[#031433] mb-2" data-testid="signature-text">
+                <p className="font-signature text-3xl text-[#0A1A2F] mb-2" data-testid="signature-text">
                   {contract.inquilino_nombre}
                 </p>
               )}
@@ -106,7 +106,7 @@ export default function ContractViewer({ contract, open, onOpenChange, onSigned 
             data-testid="download-pdf-btn"
             onClick={handleDownload}
             variant="outline"
-            className="h-11 border-[#031433]/20 text-[#031433] hover:bg-[#031433] hover:text-white transition-all duration-200"
+            className="h-11 border-[#0A1A2F]/20 text-[#0A1A2F] hover:bg-[#0A1A2F] hover:text-white transition-all duration-200"
           >
             <Download className="w-4 h-4 mr-2" /> Descargar PDF
           </Button>
@@ -122,7 +122,7 @@ export default function ContractViewer({ contract, open, onOpenChange, onSigned 
                 type="checkbox"
                 checked={agree}
                 onChange={(e) => setAgree(e.target.checked)}
-                className="mt-1 accent-[#D3A154]"
+                className="mt-1 accent-[#C9B37E]"
                 data-testid="agree-terms"
               />
               <span>
@@ -135,7 +135,7 @@ export default function ContractViewer({ contract, open, onOpenChange, onSigned 
               data-testid="sign-contract-btn"
               onClick={handleSign}
               disabled={signing || !agree || !signatureData}
-              className="w-full h-12 bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90 font-semibold transition-all duration-200 disabled:opacity-50"
+              className="w-full h-12 bg-[#C9B37E] text-[#0A1A2F] hover:bg-[#C9B37E]/90 font-semibold transition-all duration-200 disabled:opacity-50"
             >
               {signing ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Validando firma…</>
@@ -154,7 +154,7 @@ function Field({ label, children }) {
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">{label}</p>
-      <p className="text-sm font-medium text-[#031433]">{children}</p>
+      <p className="text-sm font-medium text-[#0A1A2F]">{children}</p>
     </div>
   );
 }

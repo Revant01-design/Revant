@@ -42,10 +42,10 @@ export default function Dashboard() {
       {/* Greeting */}
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#D3A154] font-semibold mb-2">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9B37E] font-semibold mb-2">
             {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
           </p>
-          <h2 className="font-display text-3xl lg:text-4xl font-bold tracking-tight text-[#031433]" data-testid="greeting">
+          <h2 className="font-display text-3xl lg:text-4xl font-bold tracking-tight text-[#0A1A2F]" data-testid="greeting">
             {greeting}.
           </h2>
           <p className="mt-2 text-slate-500">
@@ -64,7 +64,7 @@ export default function Dashboard() {
               <Button
                 data-testid="run-auto-reminders"
                 onClick={runAutoReminders}
-                className="h-10 bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90 transition-all duration-200"
+                className="h-10 bg-[#C9B37E] text-[#0A1A2F] hover:bg-[#C9B37E]/90 transition-all duration-200"
               >
                 <Send className="w-4 h-4 mr-2" /> Ejecutar recordatorios
               </Button>
@@ -114,7 +114,7 @@ export default function Dashboard() {
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-semibold">Próximos vencimientos</p>
-            <h3 className="font-display text-xl font-bold tracking-tight text-[#031433] mt-1">Acciones requeridas</h3>
+            <h3 className="font-display text-xl font-bold tracking-tight text-[#0A1A2F] mt-1">Acciones requeridas</h3>
           </div>
         </div>
         <div className="divide-y divide-slate-100">
@@ -126,12 +126,12 @@ export default function Dashboard() {
             return (
               <div key={c.contract_id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors" data-testid={`upcoming-${c.contract_id}`}>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#031433] truncate">{c.inquilino_nombre}</p>
+                  <p className="font-semibold text-[#0A1A2F] truncate">{c.inquilino_nombre}</p>
                   <p className="text-sm text-slate-500 truncate">{c.propiedad_nombre} · {fmtMXN(c.monto_renta)}/mes</p>
                 </div>
                 <div className="flex items-center gap-4 ml-4">
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium text-[#031433]">{fmtDate(c.fecha_vencimiento)}</p>
+                    <p className="text-sm font-medium text-[#0A1A2F]">{fmtDate(c.fecha_vencimiento)}</p>
                     <p className={`text-xs ${days <= 7 ? "text-red-600" : days <= 30 ? "text-amber-700" : "text-slate-500"}`}>
                       {days === 0 ? "Vence hoy" : `${days} días`}
                     </p>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Building2, Lock, KeyRound } from "lucide-react";
+import { Lock, KeyRound } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
 import { toast } from "sonner";
+import Logo from "../components/Logo";
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
@@ -31,19 +32,16 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <header className="border-b border-slate-100">
-        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md flex items-center justify-center" style={{ background: "#031433" }}>
-            <Building2 className="w-5 h-5" style={{ color: "#D3A154" }} />
-          </div>
-          <span className="font-display text-xl font-bold tracking-tight text-[#031433]">REVANT</span>
+        <div className="max-w-3xl mx-auto px-6 py-5">
+          <Logo variant="light" size="sm" />
         </div>
       </header>
 
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="w-full max-w-md space-y-6" data-testid="reset-page">
           <div>
-            <p className="uppercase tracking-[0.18em] text-xs text-[#D3A154] font-semibold mb-3">Nueva contraseña</p>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-[#031433]">Restablece tu acceso</h2>
+            <p className="uppercase tracking-[0.18em] text-xs text-[#C9B37E] font-semibold mb-3">Nueva contraseña</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-[#0A1A2F]">Restablece tu acceso</h2>
           </div>
 
           <form onSubmit={submit} className="space-y-4">
@@ -62,12 +60,12 @@ export default function ResetPassword() {
               </div>
             </div>
             <Button type="submit" disabled={loading} data-testid="reset-submit"
-                    className="w-full h-12 bg-[#031433] text-white hover:bg-[#031433]/90 transition-all duration-200">
+                    className="w-full h-12 bg-[#0A1A2F] text-white hover:bg-[#0A1A2F]/90 transition-all duration-200">
               {loading ? "Guardando…" : "Cambiar contraseña"}
             </Button>
           </form>
 
-          <Link to="/" className="block text-center text-sm text-slate-500 hover:text-[#031433]">Volver al login</Link>
+          <Link to="/" className="block text-center text-sm text-slate-500 hover:text-[#0A1A2F]">Volver al login</Link>
         </div>
       </div>
     </div>

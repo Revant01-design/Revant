@@ -51,10 +51,10 @@ export default function ArcoAdmin() {
               {items.length === 0 && <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-500">Sin solicitudes ARCO.</td></tr>}
               {items.map((r) => (
                 <tr key={r.request_id} className="border-b border-slate-100 hover:bg-slate-50" data-testid={`arco-row-${r.request_id}`}>
-                  <td className="px-6 py-4 font-mono text-xs text-[#031433]">{r.request_id}</td>
-                  <td className="px-6 py-4 capitalize text-[#031433]">{r.tipo}</td>
+                  <td className="px-6 py-4 font-mono text-xs text-[#0A1A2F]">{r.request_id}</td>
+                  <td className="px-6 py-4 capitalize text-[#0A1A2F]">{r.tipo}</td>
                   <td className="px-6 py-4">
-                    <p className="font-semibold text-[#031433]">{r.nombre_completo}</p>
+                    <p className="font-semibold text-[#0A1A2F]">{r.nombre_completo}</p>
                     <p className="text-xs text-slate-500">{r.email}</p>
                   </td>
                   <td className="px-6 py-4 text-slate-600">{fmtDate(r.created_at)}</td>
@@ -65,7 +65,7 @@ export default function ArcoAdmin() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <Button onClick={() => open(r)} variant="ghost" size="sm" data-testid={`arco-open-${r.request_id}`}
-                            className="hover:bg-[#031433] hover:text-white text-[#031433]">Gestionar</Button>
+                            className="hover:bg-[#0A1A2F] hover:text-white text-[#0A1A2F]">Gestionar</Button>
                   </td>
                 </tr>
               ))}
@@ -77,7 +77,7 @@ export default function ArcoAdmin() {
       <Dialog open={!!sel} onOpenChange={(o) => !o && setSel(null)}>
         <DialogContent className="max-w-xl" data-testid="arco-dialog">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl tracking-tight text-[#031433]">
+            <DialogTitle className="font-display text-2xl tracking-tight text-[#0A1A2F]">
               Solicitud {sel?.request_id}
             </DialogTitle>
           </DialogHeader>
@@ -89,7 +89,7 @@ export default function ArcoAdmin() {
               <Row k="Teléfono" v={sel.telefono || "—"} />
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Descripción</p>
-                <p className="text-[#031433] bg-slate-50 border border-slate-200 rounded-md p-3">{sel.descripcion}</p>
+                <p className="text-[#0A1A2F] bg-slate-50 border border-slate-200 rounded-md p-3">{sel.descripcion}</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -109,7 +109,7 @@ export default function ArcoAdmin() {
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">Notas de resolución</p>
                 <Textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={3} data-testid="arco-notes" />
               </div>
-              <Button onClick={save} className="w-full h-11 bg-[#D3A154] text-[#031433] hover:bg-[#D3A154]/90" data-testid="arco-save">
+              <Button onClick={save} className="w-full h-11 bg-[#C9B37E] text-[#0A1A2F] hover:bg-[#C9B37E]/90" data-testid="arco-save">
                 Guardar cambios
               </Button>
             </div>
@@ -128,7 +128,7 @@ function Row({ k, v }) {
   return (
     <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
       <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{k}</span>
-      <span className="text-[#031433] font-medium text-right">{v}</span>
+      <span className="text-[#0A1A2F] font-medium text-right">{v}</span>
     </div>
   );
 }

@@ -22,22 +22,22 @@ export default function Contracts() {
           <div key={c.contract_id} className="bg-white border border-slate-200 rounded-md p-6 lift-hover" data-testid={`contract-card-${c.contract_id}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-md bg-slate-50 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-[#031433]" />
+                <FileText className="w-5 h-5 text-[#0A1A2F]" />
               </div>
               <StatusBadge status={c.estatus} />
             </div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold">{c.contract_id}</p>
-            <h3 className="mt-1 font-display text-lg font-bold tracking-tight text-[#031433] truncate">{c.inquilino_nombre}</h3>
+            <h3 className="mt-1 font-display text-lg font-bold tracking-tight text-[#0A1A2F] truncate">{c.inquilino_nombre}</h3>
             <p className="text-sm text-slate-500 truncate">{c.propiedad_nombre}</p>
 
             <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-slate-100">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Renta</p>
-                <p className="font-semibold text-[#031433]">{fmtMXN(c.monto_renta)}</p>
+                <p className="font-semibold text-[#0A1A2F]">{fmtMXN(c.monto_renta)}</p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Vence</p>
-                <p className="font-semibold text-[#031433]">{fmtDate(c.fecha_vencimiento)}</p>
+                <p className="font-semibold text-[#0A1A2F]">{fmtDate(c.fecha_vencimiento)}</p>
               </div>
             </div>
 
@@ -55,7 +55,7 @@ export default function Contracts() {
                 data-testid={`open-${c.contract_id}`}
                 onClick={() => setSelected(c)}
                 size="sm"
-                className="bg-[#031433] text-white hover:bg-[#031433]/90 transition-all duration-200"
+                className="bg-[#0A1A2F] text-white hover:bg-[#0A1A2F]/90 transition-all duration-200"
               >
                 Abrir
               </Button>

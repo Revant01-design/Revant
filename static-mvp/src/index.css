@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,39 +6,40 @@
 
 body {
     margin: 0;
-    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background: #FFFFFF;
-    color: #031433;
+    color: #1A1A1A;
 }
 
 .font-display {
-    font-family: 'Manrope', 'Outfit', sans-serif;
-    letter-spacing: -0.02em;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.025em;
+    font-weight: 700;
 }
 
 @layer base {
     :root {
         --background: 0 0% 100%;
-        --foreground: 219 89% 11%;
+        --foreground: 0 0% 10%;          /* Negro carbón #1A1A1A */
         --card: 0 0% 100%;
-        --card-foreground: 219 89% 11%;
+        --card-foreground: 0 0% 10%;
         --popover: 0 0% 100%;
-        --popover-foreground: 219 89% 11%;
-        --primary: 219 89% 11%;
+        --popover-foreground: 0 0% 10%;
+        --primary: 215 65% 11%;          /* Azul tinta #0A1A2F */
         --primary-foreground: 0 0% 100%;
-        --secondary: 219 20% 96%;
-        --secondary-foreground: 219 89% 11%;
-        --muted: 219 20% 96%;
-        --muted-foreground: 219 10% 40%;
-        --accent: 36 60% 58%;
-        --accent-foreground: 219 89% 11%;
+        --secondary: 220 11% 91%;        /* Gris claro #E6E8EC */
+        --secondary-foreground: 215 65% 11%;
+        --muted: 220 11% 91%;
+        --muted-foreground: 215 10% 35%;
+        --accent: 40 41% 64%;            /* Oro suave #C9B37E */
+        --accent-foreground: 215 65% 11%;
         --destructive: 0 72% 51%;
         --destructive-foreground: 0 0% 100%;
-        --border: 219 20% 90%;
-        --input: 219 20% 90%;
-        --ring: 219 89% 11%;
+        --border: 220 11% 91%;
+        --input: 220 11% 91%;
+        --ring: 215 65% 11%;
         --radius: 0.5rem;
     }
 }
@@ -46,18 +47,18 @@ body {
 @layer base {
     * { @apply border-border; }
     body { @apply bg-background text-foreground; }
-    h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+    h1, h2, h3, h4 { font-family: 'Inter', sans-serif; letter-spacing: -0.025em; font-weight: 700; }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d6dbe6; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #b9c0d0; }
+::-webkit-scrollbar-thumb { background: #E6E8EC; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #C9D0DA; }
 
-/* Signature font for contract signing simulation */
+/* Signature font for contract signing */
 .font-signature { font-family: 'Brush Script MT', 'Lucida Handwriting', cursive; }
 
 /* Hover lift utility */
 .lift-hover { transition: transform 200ms ease, box-shadow 200ms ease; }
-.lift-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -12px rgba(3, 20, 51, 0.25); }
+.lift-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -12px rgba(10, 26, 47, 0.25); }

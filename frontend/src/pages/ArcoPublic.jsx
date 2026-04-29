@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Building2 } from "lucide-react";
+import Logo from "../components/Logo";
 
 const TIPOS = [
   { v: "acceso", l: "Acceso", d: "Solicito acceso a los datos personales que tienen sobre mí." },
@@ -40,13 +40,13 @@ export default function ArcoPublic() {
           <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-[#031433] mt-6">Solicitud recibida</h2>
-          <p className="mt-2 text-slate-500">Folio: <span className="font-bold text-[#031433]" data-testid="arco-folio">{submitted.request_id}</span></p>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-[#0A1A2F] mt-6">Solicitud recibida</h2>
+          <p className="mt-2 text-slate-500">Folio: <span className="font-bold text-[#0A1A2F]" data-testid="arco-folio">{submitted.request_id}</span></p>
           <p className="mt-4 text-sm text-slate-500">
             Recibirás respuesta en un plazo máximo de 20 días hábiles, conforme al artículo 32 de la LFPDPPP.
             Hemos enviado una confirmación a <strong>{submitted.email}</strong>.
           </p>
-          <a href="/" className="inline-block mt-8 text-sm text-[#031433] font-semibold underline decoration-[#D3A154] underline-offset-4">Volver al inicio</a>
+          <a href="/" className="inline-block mt-8 text-sm text-[#0A1A2F] font-semibold underline decoration-[#C9B37E] underline-offset-4">Volver al inicio</a>
         </div>
       </div>
     );
@@ -55,17 +55,14 @@ export default function ArcoPublic() {
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-slate-100">
-        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md flex items-center justify-center" style={{ background: "#031433" }}>
-            <Building2 className="w-5 h-5" style={{ color: "#D3A154" }} />
-          </div>
-          <span className="font-display text-xl font-bold tracking-tight text-[#031433]">REVANT</span>
+        <div className="max-w-3xl mx-auto px-6 py-5">
+          <Logo variant="light" size="sm" />
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-12">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[#D3A154] font-semibold mb-3">LFPDPPP · Derechos ARCO</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight text-[#031433]">Ejercer mis derechos</h1>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[#C9B37E] font-semibold mb-3">LFPDPPP · Derechos ARCO</p>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-[#0A1A2F]">Ejercer mis derechos</h1>
         <p className="mt-3 text-slate-500 max-w-2xl">
           Conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares,
           puedes solicitar el <strong>Acceso</strong>, <strong>Rectificación</strong>, <strong>Cancelación</strong> u
@@ -120,7 +117,7 @@ export default function ArcoPublic() {
               Al enviar declaras bajo protesta de decir verdad ser el titular de los datos o representante legal acreditado.
             </p>
             <Button type="submit" disabled={loading} data-testid="arco-submit"
-                    className="h-12 px-6 bg-[#031433] text-white hover:bg-[#031433]/90 transition-all duration-200">
+                    className="h-12 px-6 bg-[#0A1A2F] text-white hover:bg-[#0A1A2F]/90 transition-all duration-200">
               <Send className="w-4 h-4 mr-2" /> {loading ? "Enviando…" : "Enviar solicitud"}
             </Button>
           </div>
